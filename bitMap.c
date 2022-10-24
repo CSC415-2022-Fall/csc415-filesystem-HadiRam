@@ -82,6 +82,20 @@ int checkForConsecFreeSpace(unsigned char myByte, int count){
     return 0;
 }
 
+/*
+
+void initBitMap(){
+    char* BitMap = malloc(5*BLOCKSIZE);
+    unsigned char tempByte = 0xFC;
+    BitMap[0] = 0xFC;
+    1111 1100
+    for(int i = 1; i < 5*BLOCKSIZE; i++){
+        BitMap[i] = 0x00;
+    }
+    LBAWrite(BitMap, 5, 1);
+}
+*/
+
 int main(){
     printf("Hello \n");
     unsigned char tempByte = 0x02;
