@@ -1,6 +1,7 @@
+#include "bitMap.h"
 #include <stdio.h>
 
-int BitCounter(unsigned char myByte){
+int bitCounter(unsigned char myByte){
     int x = 0;
     if((myByte & 0x80) == 0x80) x++;
     if((myByte & 0x40) == 0x40) x++;

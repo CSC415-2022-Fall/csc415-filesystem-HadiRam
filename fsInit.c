@@ -23,6 +23,7 @@
 
 #include "fsLow.h"
 #include "mfs.h"
+#include "bitMap.h"
 
 #define MAGIC_NUMBER 69420
 
@@ -34,12 +35,26 @@ typedef struct VCB{
 	int numBlocks;
 	int blockSize;
 	int freeSpace;
+	//Memory Pointer allocated at runtime
+	char* freeSpaceBitMap;
 	int RootDir;
 }VCB;
 
 //Global Volume Control Block
 VCB vcb;
 
+//Helper Function
+void initBitMap(char* bitMapPointer, u_int64_t blockSize){
+    unsigned char tempByte = 0xFC;
+	//1111 1100 Represent the first 6 blocks used by VCB and the Bitmap itself
+	//Setting the first byte at index 0
+    bitMapPointer[0] = 0xFC;
+	//Initializing all the other bytes as free space
+    for(int i = 1; i < 5*blockSize; i++){
+        BitMap[i] = 0x00;
+    }
+    LBAWrite(bitMapPointer, 5, 1);
+}
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
@@ -55,6 +70,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		vcb.numBlocks = numberOfBlocks;
 		vcb.blockSize = blockSize;
 		//Initialize Freespace
+		vcb.freeSpaceBitMap = malloc(5*blockSize);
+		initBitMap(vcb.freeSpaceBitMap, blockSize);
 		vcb.freeSpace = 1;
 		//Initialize RootDirectory
 		vcb.RootDir;
