@@ -28,6 +28,7 @@
 #define MAGIC_NUMBER 69420
 
 //Size of VCB is 24 bytes
+//Volume Control Block struct
 typedef struct VCB{
 	//unique magic number
 	long signature;
@@ -38,10 +39,13 @@ typedef struct VCB{
 	//Memory Pointer allocated at runtime
 	char* freeSpaceBitMap;
 	int RootDir;
-}VCB;
+} VCB;
 
 //Global Volume Control Block
 VCB vcb;
+
+
+
 
 //Helper Function
 void initBitMap(char* bitMapPointer, u_int64_t blockSize){
@@ -79,7 +83,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	}
 	
 
-	//memcpy(vcbBlock, vcb, sizeof(VCB));
+	memcpy(vcbBlock, vcb, sizeof(VCB));
 	LBAwrite(vcbBlock, 1, 0);
 
 	/*

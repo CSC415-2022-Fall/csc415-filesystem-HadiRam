@@ -32,6 +32,8 @@ typedef u_int64_t uint64_t;
 typedef u_int32_t uint32_t;
 #endif
 
+
+
 // This structure is returned by fs_readdir to provide the caller with information
 // about each file as it iterates through a directory
 struct fs_diriteminfo
@@ -53,6 +55,8 @@ typedef struct
 	unsigned short	dirEntryPosition;	/*which directory entry position, like file pos */
 	uint64_t	directoryStartLocation;		/*Starting LBA of directory */
 	} fdDir;
+
+
 
 // Key directory functions
 int fs_mkdir(const char *pathname, mode_t mode);
