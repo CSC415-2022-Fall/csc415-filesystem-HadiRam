@@ -38,7 +38,7 @@ unsigned char mask(int offset){
 }
 
 int freeSpaceCounter(unsigned char myByte){
-    return 8-BitCounter(myByte);
+    return 8-BitCounter(myByte); // gives you the remaining number of free blocks in a byte
 };
 
 void setABit(unsigned char *myByte, int offset){

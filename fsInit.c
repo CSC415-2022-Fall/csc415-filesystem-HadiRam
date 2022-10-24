@@ -62,7 +62,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	}
 	
 
-	memcpy(vcbBlock, vcb, sizeof(VCB));
+	//memcpy(vcbBlock, vcb, sizeof(VCB));
 	LBAwrite(vcbBlock, 1, 0);
 
 	/*
