@@ -1,5 +1,6 @@
 #include "bitMap.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 int bitCounter(unsigned char myByte){
     int x = 0;
@@ -39,7 +40,7 @@ unsigned char mask(int offset){
 }
 
 int freeSpaceCounter(unsigned char myByte){
-    return 8-BitCounter(myByte); // gives you the remaining number of free blocks in a byte
+    return 8 - bitCounter(myByte); // gives you the remaining number of free blocks in a byte
 };
 
 void setABit(unsigned char *myByte, int offset){
@@ -83,30 +84,61 @@ int checkForConsecFreeSpace(unsigned char myByte, int count){
     return 0;
 }
 
-/*
+//1111 1100 0000 0000 1111 1111 0000 0000 0000 0000
 
-void initBitMap(){
-    char* BitMap = malloc(5*BLOCKSIZE);
-    unsigned char tempByte = 0xFC;
-    BitMap[0] = 0xFC;
-    1111 1100
-    for(int i = 1; i < 5*BLOCKSIZE; i++){
-        BitMap[i] = 0x00;
+int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
+    int firstFreeBlock;
+    int firstFreeByte;
+    int maxFreeBytesNeeded = (numOfBlocks + 7)/8;
+    int freeConsecBytes = 0;
+    for(int i =0; i < bitMapSize; i++){
+        if(bitMap[i] == 0x00){
+            if(freeConsecBytes == 0){
+                firstFreeBlock = i*8;
+                firstFreeByte = i; 
+                printf("%d, %d\n", firstFreeBlock, firstFreeByte);
+            }
+            freeConsecBytes++;
+
+        }else{
+            freeConsecBytes = 0;
+        }
+
+        if(freeConsecBytes == maxFreeBytesNeeded){
+            //Go back a byte and check for extra free space
+            for(int j = 7; j >= 0; j--){
+                if(checkABit(bitMap[firstFreeByte-1], j) == 0){
+                    firstFreeBlock = (firstFreeByte-1)*8 + j;
+                }else{
+                    //break the for loop
+                    j = -1;
+                }
+            }
+            //break the for loop
+            i = bitMapSize;
+        }
     }
-    LBAWrite(BitMap, 5, 1);
+
+    return firstFreeBlock;
 }
-*/
 
 int main(){
     printf("Hello \n");
     unsigned char tempByte = 0x02;
-    
-    setABit(&tempByte, 2);
+    unsigned char* bitMap = malloc(5);
+
+    bitMap[0] = 0xFC;
+    for(int i = 1; i<5; i++){
+        bitMap[i] = 0x00;
+    }
+    bitMap[2] = 0xFF;
+
+    //1111 1100 0000 0000 1111 1111 0000 0000 0000 0000
+
     //printf("%d\n", freeSpaceCounter(tempByte));
     //0010 0010
     // clearABit(&tempByte, 6);
     // clearABit(&tempByte, 2);
-    printf("%d\n", checkForConsecFreeSpace(tempByte, 2));
-    printf("%u\n", tempByte);
+    printf("%d\n", getConsecFreeSpace(bitMap, 5, 6));
     return 0;
 }

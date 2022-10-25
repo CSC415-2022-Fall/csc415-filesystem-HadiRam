@@ -9,5 +9,6 @@ void clearABit(unsigned char *myByte, int offset);
 int checkABit(unsigned char myByte, int offset);
 int checkForConsecFreeSpace(unsigned char myByte, int count);
 
+int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks);
 
 #endif

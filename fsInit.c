@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "fsLow.h"
 #include "mfs.h"
@@ -27,22 +28,6 @@
 
 #define MAGIC_NUMBER 69420
 
-//Size of VCB is 24 bytes
-//Volume Control Block struct
-typedef struct VCB{
-	//unique magic number
-	long signature;
-
-	int numBlocks;
-	int blockSize;
-	int freeSpace;
-	//Memory Pointer allocated at runtime
-	char* freeSpaceBitMap;
-	int RootDir;
-} VCB;
-
-//Global Volume Control Block
-VCB vcb;
 
 
 
@@ -74,25 +59,45 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		vcb.numBlocks = numberOfBlocks;
 		vcb.blockSize = blockSize;
 		//Initialize Freespace
-		vcb.freeSpaceBitMap = malloc(5*blockSize);
+		int bitMapBlockSize = ((numberOfBlocks + 7)/8 + (blockSize -1))/blockSize;
+		vcb.freeSpaceBitMap = malloc(bitMapBlockSize*blockSize);
+		vcb.bitMapByteSize = bitMapBlockSize*blockSize;
 		initBitMap(vcb.freeSpaceBitMap, blockSize);
 		vcb.freeSpace = 1;
 		//Initialize RootDirectory
-		vcb.RootDir;
+		//Our Directory Entry is 60 bytes long
+		int numOfDirEntries = 51; //6 blocks 
+		dirEntry* rootDir = malloc(numOfDirEntries*sizeof(dirEntry));
+		//Setting the directory entries to their free state
+		for(int i = 0; i < numOfDirEntries; i++){
+			rootDir[i].isDirectory = -1; //free state
+			rootDir[i].size = 0;
+			rootDir[i].location = i;
+		}
+		int freeBlockIndex = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
+		//Set up the "." Directory Entry
+		rootDir[0].name = ".";
+		rootDir[0].size = (int) numOfDirEntries*sizeof(dirEntry);
+		rootDir[0].isDirectory = 1;
+		rootDir[0].location = freeBlockIndex;
+		time(&rootDir[0].created);
+		time(&rootDir[0].lastModified);
+		//Set up the ".." Directory Entry
+		rootDir[0].name = "..";
+		rootDir[0].size = (int) numOfDirEntries*sizeof(dirEntry);
+		rootDir[0].isDirectory = 1;
+		rootDir[0].location = freeBlockIndex;
+		time(&rootDir[0].created);
+		time(&rootDir[0].lastModified);
+
+		vcb.RootDir = freeBlockIndex;
+		LBAwrite(rootDir, 6, freeBlockIndex);
 		
 	}
 	
-
 	memcpy(vcbBlock, vcb, sizeof(VCB));
 	LBAwrite(vcbBlock, 1, 0);
 
-	/*
-	[
-		
-
-
-	]
-	*/
 
 	return 0;
 	}
