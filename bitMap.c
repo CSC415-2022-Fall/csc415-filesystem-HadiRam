@@ -43,18 +43,20 @@ int freeSpaceCounter(unsigned char myByte){
     return 8 - bitCounter(myByte); // gives you the remaining number of free blocks in a byte
 };
 
-void setABit(unsigned char *myByte, int offset){
+void setABit(unsigned char *bitMap, int offset){
     /*
     setBit(1101 1001, 2) -> 1111 1001
     */
-    unsigned char tempByte = mask(offset);
-    *myByte = (*myByte | tempByte);
+    int byteIndex = offset/8;
+    unsigned char tempByte = mask((offset % 8));
+    bitMap[byteIndex] = (bitMap[byteIndex] | tempByte);
 }
 
-void clearABit(unsigned char *myByte, int offset){
-    unsigned char tempByte = mask(offset);
+void clearABit(unsigned char *bitMap, int offset){
+    int byteIndex = offset/8;
+    unsigned char tempByte = mask((offset % 8));
     tempByte = ~tempByte;
-    *myByte = (*myByte & tempByte);
+    bitMap[byteIndex] = (bitMap[byteIndex] & tempByte);
 }
 
 int checkABit(unsigned char myByte, int offset){
@@ -116,6 +118,10 @@ int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
             //break the for loop
             i = bitMapSize;
         }
+    }
+
+    for(int i = 0; i < numOfBlocks; i++){
+        setABit(bitMap, numOfBlocks + i);
     }
 
     return firstFreeBlock;

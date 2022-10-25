@@ -26,7 +26,7 @@
 #include "mfs.h"
 #include "bitMap.h"
 
-#define MAGIC_NUMBER 69420
+#define MAGIC_NUMBER 0xEFB112C2EFB112C1
 
 
 
@@ -53,8 +53,10 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	LBAread(vcbBlock, 1, 0);
 	memcpy(&vcb, vcbBlock, sizeof(VCB));
     //TODO: grab the vcb struct
+	
 	if(vcb.signature != MAGIC_NUMBER){
 		//Initialize VCB
+	
 		vcb.signature = MAGIC_NUMBER;
 		vcb.numBlocks = numberOfBlocks;
 		vcb.blockSize = blockSize;
@@ -64,6 +66,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		vcb.bitMapByteSize = bitMapBlockSize*blockSize;
 		initBitMap(vcb.freeSpaceBitMap, blockSize);
 		vcb.freeSpace = 1;
+
+		
 		//Initialize RootDirectory
 		//Our Directory Entry is 60 bytes long
 		int numOfDirEntries = 51; //6 blocks 
@@ -76,6 +80,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			rootDir[i].location = i;
 		}
 		int freeBlockIndex = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
+		
 		//Set up the "." Directory Entry
 		rootDir[0].name = ".";
 		rootDir[0].size = (int) numOfDirEntries*sizeof(dirEntry);
@@ -99,6 +104,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	memcpy(vcbBlock, &vcb, sizeof(VCB));
 	LBAwrite(vcbBlock, 1, 0);
 
+	
 
 	return 0;
 	}
