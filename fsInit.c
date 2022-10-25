@@ -40,9 +40,9 @@ void initBitMap(char* bitMapPointer, u_int64_t blockSize){
     bitMapPointer[0] = 0xFC;
 	//Initializing all the other bytes as free space
     for(int i = 1; i < 5*blockSize; i++){
-        BitMap[i] = 0x00;
+        bitMapPointer[i] = 0x00;
     }
-    LBAWrite(bitMapPointer, 5, 1);
+    LBAwrite(bitMapPointer, 5, 1);
 }
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
@@ -70,6 +70,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		dirEntry* rootDir = malloc(numOfDirEntries*sizeof(dirEntry));
 		//Setting the directory entries to their free state
 		for(int i = 0; i < numOfDirEntries; i++){
+			rootDir[i].name = malloc(32*sizeof(char));
 			rootDir[i].isDirectory = -1; //free state
 			rootDir[i].size = 0;
 			rootDir[i].location = i;
@@ -95,7 +96,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		
 	}
 	
-	memcpy(vcbBlock, vcb, sizeof(VCB));
+	memcpy(vcbBlock, &vcb, sizeof(VCB));
 	LBAwrite(vcbBlock, 1, 0);
 
 

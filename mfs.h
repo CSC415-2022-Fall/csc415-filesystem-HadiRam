@@ -75,7 +75,7 @@ VCB vcb;
 
 //Directory Entry struct with the size of 60 bytes
 typedef struct dirEntry{
-	char name[32];
+	char* name;
 	int location;
 	int size;
 	//Free state is -1 || is a file directory entry 0 || is a directory 1
