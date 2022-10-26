@@ -48,6 +48,10 @@ void initBitMap(char* bitMapPointer, u_int64_t blockSize){
     LBAwrite(bitMapPointer, 5, 1);
 }
 
+void updateBitMap(){
+	LBAwrite(vcb.freeSpaceBitMap, 5, 1);
+}
+
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
@@ -89,7 +93,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			rootDir[i].location = i;
 		}
 		int freeBlockIndex = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
-		
+		updateBitMap();
 		//Set up the "." Directory Entry
 		rootDir[0].name = ".";
 		rootDir[0].size = (int) numOfDirEntries*sizeof(dirEntry);
