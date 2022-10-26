@@ -114,8 +114,16 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		vcb.RootDir = freeBlockIndex;
 		memcpy(vcbBlock, &vcb, sizeof(VCB));
 		LBAwrite(vcbBlock, 1, 0);
+
 		
+		// for(int i=0; i < numOfDirEntries; i++){
+		// 	free(rootDir[i].name);
+		// }
+		// free(rootDir);
 	}
+
+	// free(vcbBlock);
+	
 	
 	return 0;
 	}
@@ -123,5 +131,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 void exitFileSystem ()
 	{
-	printf ("System exiting\n");
+		// free(vcb.freeSpaceBitMap);
+		printf ("System exiting\n");
 	}
