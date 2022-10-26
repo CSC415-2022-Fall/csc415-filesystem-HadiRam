@@ -31,6 +31,8 @@
 
 #define MAGIC_NUMBER 0xEFB112C2EFB112C2
 
+VCB vcb;
+
 //Helper Function
 void initBitMap(char* bitMapPointer, u_int64_t blockSize){
     unsigned char tempByte = 0xFC;
@@ -103,6 +105,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	memcpy(vcbBlock, &vcb, sizeof(VCB));
 	LBAwrite(vcbBlock, 1, 0);
 
+	char* buffer = malloc(512);
+	LBAread(buffer, 1, 1);
 	
 
 	return 0;
