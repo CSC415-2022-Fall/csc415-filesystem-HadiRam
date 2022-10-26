@@ -91,7 +91,7 @@ int checkForConsecFreeSpace(unsigned char myByte, int count){
 int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
     int firstFreeBlock;
     int firstFreeByte;
-    int maxFreeBytesNeeded = (numOfBlocks + 7)/8;
+    int minFreeBytesNeeded = (numOfBlocks + 7)/8;
     int freeConsecBytes = 0;
     for(int i =0; i < bitMapSize; i++){
         if(bitMap[i] == 0x00){
@@ -105,7 +105,7 @@ int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
             freeConsecBytes = 0;
         }
 
-        if(freeConsecBytes == maxFreeBytesNeeded){
+        if(freeConsecBytes == minFreeBytesNeeded){
             //Go back a byte and check for extra free space
             for(int j = 7; j >= 0; j--){
                 if(checkABit(bitMap[firstFreeByte-1], j) == 0){
@@ -121,7 +121,7 @@ int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
     }
 
     for(int i = 0; i < numOfBlocks; i++){
-        setABit(bitMap, numOfBlocks + i);
+        setABit(bitMap, firstFreeBlock + i);
     }
 
     return firstFreeBlock;

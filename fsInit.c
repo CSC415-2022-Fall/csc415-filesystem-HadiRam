@@ -31,6 +31,7 @@
 
 #define MAGIC_NUMBER 0xEFB112C2EFB112C2
 
+//Redeclaring the vcb global variable
 VCB vcb;
 
 //Helper Function
@@ -43,6 +44,7 @@ void initBitMap(char* bitMapPointer, u_int64_t blockSize){
     for(int i = 1; i < 5*blockSize; i++){
         bitMapPointer[i] = 0x00;
     }
+	//Write back into disk
     LBAwrite(bitMapPointer, 5, 1);
 }
 
@@ -50,24 +52,30 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
+
 	char* vcbBlock = malloc(blockSize);
+
+	//Read the first block (VCB) to vcbBlock buffer
 	LBAread(vcbBlock, 1, 0);
+	//Copying VCB struct variables from vcbBlock into the VCB struct
 	memcpy(&vcb, vcbBlock, sizeof(VCB));
-    //TODO: grab the vcb struct
 	
 	if(vcb.signature != MAGIC_NUMBER){
-		//Initialize VCB
-		printf("UNINIT VCB\n");
+		//Initialize VCB variables
+		printf("INITIALIZING VOLUME CONTROL BLOCK\n");
 		vcb.signature = MAGIC_NUMBER;
 		vcb.numBlocks = numberOfBlocks;
 		vcb.blockSize = blockSize;
+
 		//Initialize Freespace
+		//Should come out to be 5 if numberOfBlocks = 19531 & blockSize = 512
 		int bitMapBlockSize = ((numberOfBlocks + 7)/8 + (blockSize -1))/blockSize;
+		//Setting up the freespace pointer array
 		vcb.freeSpaceBitMap = malloc(bitMapBlockSize*blockSize);
+		//Keeping track of the size of the bitmap array
 		vcb.bitMapByteSize = bitMapBlockSize*blockSize;
 		initBitMap(vcb.freeSpaceBitMap, blockSize);
 		vcb.freeSpace = 1;
-
 		
 		//Initialize RootDirectory
 		//Our Directory Entry is 60 bytes long
@@ -76,7 +84,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		//Setting the directory entries to their free state
 		for(int i = 0; i < numOfDirEntries; i++){
 			rootDir[i].name = malloc(32*sizeof(char));
-			rootDir[i].isDirectory = -1; //free state
+			rootDir[i].dirType = -1; //free state
 			rootDir[i].size = 0;
 			rootDir[i].location = i;
 		}
@@ -85,30 +93,30 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		//Set up the "." Directory Entry
 		rootDir[0].name = ".";
 		rootDir[0].size = (int) numOfDirEntries*sizeof(dirEntry);
-		rootDir[0].isDirectory = 1;
+		// 1 for Directory type directory Entry
+		rootDir[0].dirType = 1;
 		rootDir[0].location = freeBlockIndex;
+		//Setting the time created and last modified to the current time
 		time(&rootDir[0].created);
 		time(&rootDir[0].lastModified);
-		//Set up the ".." Directory Entry
+
+		//Set up the ".." Directory Entry, repeat the step
 		rootDir[0].name = "..";
 		rootDir[0].size = (int) numOfDirEntries*sizeof(dirEntry);
-		rootDir[0].isDirectory = 1;
+		rootDir[0].dirType = 1;
 		rootDir[0].location = freeBlockIndex;
 		time(&rootDir[0].created);
 		time(&rootDir[0].lastModified);
 
-		vcb.RootDir = freeBlockIndex;
+		//Writing the root Directory into disk
 		LBAwrite(rootDir, 6, freeBlockIndex);
+		//Writing the VCB back into disk
+		vcb.RootDir = freeBlockIndex;
+		memcpy(vcbBlock, &vcb, sizeof(VCB));
+		LBAwrite(vcbBlock, 1, 0);
 		
 	}
 	
-	memcpy(vcbBlock, &vcb, sizeof(VCB));
-	LBAwrite(vcbBlock, 1, 0);
-
-	char* buffer = malloc(512);
-	LBAread(buffer, 1, 1);
-	
-
 	return 0;
 	}
 	

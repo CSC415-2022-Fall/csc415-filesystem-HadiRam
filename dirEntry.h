@@ -10,7 +10,7 @@ typedef struct dirEntry{
 	int location;
 	int size;
 	//Free state is -1 || is a file directory entry 0 || is a directory 1
-	int isDirectory;
+	int dirType;
 	time_t created;
 	time_t lastModified;
 	
