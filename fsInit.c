@@ -25,12 +25,11 @@
 #include "fsLow.h"
 #include "mfs.h"
 #include "bitMap.h"
-
-#define MAGIC_NUMBER 0xEFB112C2EFB112C1
-
-
+#include "vcb.h"
+#include "dirEntry.h"
 
 
+#define MAGIC_NUMBER 0xEFB112C2EFB112C2
 
 //Helper Function
 void initBitMap(char* bitMapPointer, u_int64_t blockSize){
@@ -56,7 +55,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 	if(vcb.signature != MAGIC_NUMBER){
 		//Initialize VCB
-	
+		printf("UNINIT VCB\n");
 		vcb.signature = MAGIC_NUMBER;
 		vcb.numBlocks = numberOfBlocks;
 		vcb.blockSize = blockSize;

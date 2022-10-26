@@ -56,35 +56,6 @@ typedef struct
 	uint64_t	directoryStartLocation;		/*Starting LBA of directory */
 	} fdDir;
 
-//Size of VCB is 24 bytes
-//Volume Control Block struct
-typedef struct VCB{
-	//unique magic number
-	long signature;
-
-	int numBlocks;
-	int blockSize;
-	int freeSpace;
-	//Memory Pointer allocated at runtime
-	unsigned char* freeSpaceBitMap;
-	int bitMapByteSize;
-	int RootDir;
-} VCB;
-
-VCB vcb;
-
-//Directory Entry struct with the size of 60 bytes
-typedef struct dirEntry{
-	char* name;
-	int location;
-	int size;
-	//Free state is -1 || is a file directory entry 0 || is a directory 1
-	int isDirectory;
-	time_t created;
-	time_t lastModified;
-	
-} dirEntry;
-
 
 // Key directory functions
 int fs_mkdir(const char *pathname, mode_t mode);
