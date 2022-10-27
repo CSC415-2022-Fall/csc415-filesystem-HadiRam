@@ -93,6 +93,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			rootDir[i].location = i;
 		}
 		int freeBlockIndex = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
+		//Update bitmap on disk
 		updateBitMap();
 		//Set up the "." Directory Entry
 		rootDir[0].name = ".";
