@@ -29,7 +29,7 @@
 #include "dirEntry.h"
 
 
-#define MAGIC_NUMBER 0xEFB112C2EFB112C2
+#define MAGIC_NUMBER 0xEFB112C2EFB112C1
 
 //Redeclaring the vcb global variable
 VCB vcb;
@@ -125,9 +125,9 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	}else{
 		//Load the Bitmap into the VCB Bitmap Pointer
-		int bitMapBlockSize = ((numberOfBlocks + 7)/8 + (blockSize -1))/blockSize;
-		vcb.freeSpaceBitMap = malloc(bitMapBlockSize*blockSize);
-		initBitMap(vcb.freeSpaceBitMap, blockSize);
+		int bitMapBlockSize = 5*blockSize;
+		vcb.freeSpaceBitMap = malloc(5*blockSize);
+		LBAread(vcb.freeSpaceBitMap, 5, vcb.freeSpace);
 	}
 
 	free(vcbBlock);
