@@ -121,13 +121,16 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		LBAwrite(vcbBlock, 1, 0);
 
 		
-		// for(int i=0; i < numOfDirEntries; i++){
-		// 	free(rootDir[i].name);
-		// }
-		// free(rootDir);
+		free(rootDir);
+
+	}else{
+		//Load the Bitmap into the VCB Bitmap Pointer
+		int bitMapBlockSize = ((numberOfBlocks + 7)/8 + (blockSize -1))/blockSize;
+		vcb.freeSpaceBitMap = malloc(bitMapBlockSize*blockSize);
+		initBitMap(vcb.freeSpaceBitMap, blockSize);
 	}
 
-	// free(vcbBlock);
+	free(vcbBlock);
 	
 	
 	return 0;
@@ -136,6 +139,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	
 void exitFileSystem ()
 	{
-		// free(vcb.freeSpaceBitMap);
+		free(vcb.freeSpaceBitMap);
 		printf ("System exiting\n");
 	}
