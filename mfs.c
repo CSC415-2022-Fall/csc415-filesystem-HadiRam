@@ -96,21 +96,10 @@ int parsePath(const char *pathname)
 
 
 // beginings of getcwd
-/*char *fs_getcwd(char *pathname, size_t size)
+char *fs_getcwd(char *pathname, size_t size)
 {
-    //if parsepath(pathname) retruns 1. 
-
-    //if its root return /
-    char *currentWorkingDirectory = pathname;
-
-    
-
-    
-
-
-
-    return  currentWorkingDirectory;
-}*/
+    return pathname;
+}
 
 // begining logic of mkdir.
 //int fs_mkdir(const char *pathname, mode_t mode){
