@@ -12,6 +12,40 @@ void loadDirEntries(dirEntry* DEArray, int location){
     memcpy(&DEArray, DEBuffer, 51*sizeof(dirEntry));
 }
 
+char * getParentDirectory(char *path){
+  const char *delim = "/";
+  char tempPath[strlen(path)+1];
+
+  strcpy(tempPath, path);
+  
+  char *token = strtok(tempPath, delim);
+  char *pathTokens[64];
+
+  int tokenIndex = 0;
+  while (token != NULL)
+  {
+    pathTokens[tokenIndex] = token;
+    token = strtok(NULL, delim);
+    tokenIndex++;
+  }
+
+  char pathOfParent[64];
+  pathOfParent[0] = '\0';
+  
+  if(path[0] == '/') strcat(pathOfParent, delim);
+
+  for (int i = 0; i < tokenIndex - 1; i++)
+  {
+    
+    strcat(pathOfParent, pathTokens[i]);
+    strcat(pathOfParent, delim);
+  }
+
+    return pathOfParent;
+  
+
+}
+
 //function to parse a pathname to check for validity.
 //returns error if invalid path (-2)
 //returns -1 if path is valid but the
@@ -19,7 +53,8 @@ void loadDirEntries(dirEntry* DEArray, int location){
 dirEntry parsePath(const char *pathname, int* entryIndex)
 {
     char *delim = "/";
-    char * tempPath = cwdPath;
+    char tempPath[strlen(cwdPath)+1];
+    strcpy(tempPath,cwdPath);
     dirEntry* tempDirEntries = malloc(51*sizeof(dirEntry));
     char * DEBuffer = malloc(6*512);
     dirEntry tempDE;
@@ -99,28 +134,32 @@ dirEntry parsePath(const char *pathname, int* entryIndex)
 }
 
 
-
-
 // beginings of getcwd
 char *fs_getcwd(char *pathname, size_t size)
 {
     return pathname;
 }
+int fs_mkdir(const char *pathname, mode_t mode){
+char * parentPath = getParentDirectory(pathname);
 
-// begining logic of mkdir.
-//int fs_mkdir(const char *pathname, mode_t mode){
+//fs_setcwd()
 
-//if(path name) is valid, and does not already exist
-//initialize new directory
-//int numOfDirEntries = 51; //6 blocks
-//dirEntry* newDir = malloc(numOfDirEntries*sizeof(dirEntry));
+//look for a free directory entry,by looping through cwdEntries.dirType = -1
+//once found, set the name, to new file name (last element of passed path)
+//set dir type type 1, set size to sizeOf(sizeof(dirEntry) * numOfDirEntries)
+//set location to 6 free blocks, using bitmap functions which returns index.
+//Also lbawrite to that index which is the location of the 6 free blocks.
+//cwdEntries[0] is . (itself), which will be set to the parent of the new directory ..
 
-//for(int i = 0; i < numOfDirEntries; i++){
-//newDir[i].name = malloc(32*sizeof(char));
-//newDir[i].dirType = -1; //free state
-//newDir[i].size = 0;
-//newDir[i].location = i;
-//}
-//return 0;
+int numOfDirEntries = 51; //6 blocks
+dirEntry* newDir = malloc(numOfDirEntries*sizeof(dirEntry));
+//get directory of n-1, u wanna make it in n 
+for(int i = 0; i < numOfDirEntries; i++){
+newDir[i].name = malloc(32*sizeof(char));
+newDir[i].dirType = -1; //free state
+newDir[i].size = 0;
+newDir[i].location = i;
+}
 
-//}
+}
+

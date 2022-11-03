@@ -106,12 +106,12 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		time(&rootDir[0].lastModified);
 
 		//Set up the ".." Directory Entry, repeat the step
-		rootDir[0].name = "..";
-		rootDir[0].size = (int) numOfDirEntries*sizeof(dirEntry);
-		rootDir[0].dirType = 1;
-		rootDir[0].location = freeBlockIndex;
-		time(&rootDir[0].created);
-		time(&rootDir[0].lastModified);
+		rootDir[1].name = "..";
+		rootDir[1].size = (int) numOfDirEntries*sizeof(dirEntry);
+		rootDir[1].dirType = 1;
+		rootDir[1].location = freeBlockIndex;
+		time(&rootDir[1].created);
+		time(&rootDir[1].lastModified);
 
 		//Writing the root Directory into disk
 		LBAwrite(rootDir, 6, freeBlockIndex);
