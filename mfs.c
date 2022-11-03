@@ -4,6 +4,7 @@
 #include "dirEntry.h"
 #include <string.h>
 
+
 char *delim = "/";
 
 //function to parse a pathname to check for validity.
@@ -14,39 +15,42 @@ int parsePath(const char *pathname)
 {
 
     char * tempPath = cwdPath;
-    dirEntry* tempDirEntries = cwdEntries;
+    dirEntry* tempDirEntries = malloc(51*sizeof(dirEntry));
+    char * DEBuffer = malloc(6*512);
     //malloc(51*sizeof(dirEntry));
 
-    //check if path is relative or absolute
     //if its absolute, the first character is a slash.
-
-    //if equal to zero, path is absolute, else path is relative
-    if (strcmp(pathname[0], "/") == 0)
-    {
-    }
-    //if its not absolute path, append working directory.
-    else
+    //Check if path is relative and make it absolute
+    if (strcmp(pathname[0], "/") != 0)
     {
         strncat(tempPath, pathname, strlen(pathname));
-       //tempPath = cwdPath + tempPath;
+        tempDirEntries = cwdEntries;
+    }else{
+        //Grab the root directory entries
+        LBAread(DEBuffer, 6, 6);
+        memcpy(&tempDirEntries, DEBuffer, 51*sizeof(dirEntry));
     }
+    
 
     //tokenize path with / as delimeter.
     char *token = strtok(tempPath, delim);
-    char *pathTokens[32];
+    char *pathTokens[64];
 
-    int counter = 0;
+    int tokenIndex = 0;
     while (token != NULL)
     {
-        pathTokens[counter] = token;
+        pathTokens[tokenIndex] = token;
         token = strtok(NULL, delim);
-        counter++;
+        tokenIndex++;
     }
+
+    pathTokens[tokenIndex] = NULL;
 
     //Check if path exists
     int exists = 0;
     int tokenCounter = 0;
-    int entryIndex = 0;
+    int entryIndex = -2;
+
     while(pathTokens[tokenCounter] != NULL){
         for(int i = 0; i < 51; i++){
             if(tempDirEntries[i].dirType != -1
@@ -57,22 +61,36 @@ int parsePath(const char *pathname)
             }
 
         }
-        if(exists == 0 && counter != 0){
-            printf("Error invalid path");
-        }else{
-            counter--;
-            LBAread(tempDirEntries,6,tempDirEntries[entryIndex].location);
-            exists = 0;
-            tokenCounter++;
-        }
-        
 
+        if(exists == 0){
+            //Not the last element
+            if(tokenCounter != tokenIndex - 1){
+                entryIndex = -2;
+                break;
+            }else{
+                printf("The path exists");
+                entryIndex = -1;
+                break;
+            }
+        }else if(exists == 1){
+            if(tokenCounter != tokenIndex - 1){
+                //Load the next directory DE
+                LBAread(DEBuffer,6,tempDirEntries[entryIndex].location);
+                memcpy(&tempDirEntries, DEBuffer, 51*sizeof(dirEntry));
+                exists = 0;
+                tokenCounter++;
+            }else{
+                //Found the file/directory and return the DE index of Dir[n-1]
+                break;
+            }
+        }
 
     }
 
+    free(tempDirEntries);
+    free(DEBuffer);
 
-
-
+    return entryIndex;
 
 }
 
