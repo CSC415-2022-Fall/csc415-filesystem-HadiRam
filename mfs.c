@@ -5,7 +5,12 @@
 #include <string.h>
 
 
-
+//Helper Functions
+void loadDirEntries(dirEntry* DEArray, int location){
+    char* DEBuffer = malloc(6*512);
+    LBAread(DEBuffer, 6, location);
+    memcpy(&DEArray, DEBuffer, 51*sizeof(dirEntry));
+}
 
 //function to parse a pathname to check for validity.
 //returns error if invalid path (-2)
@@ -27,8 +32,7 @@ dirEntry parsePath(const char *pathname, int* entryIndex)
         tempDirEntries = cwdEntries;
     }else{
         //Grab the root directory entries
-        LBAread(DEBuffer, 6, 6);
-        memcpy(&tempDirEntries, DEBuffer, 51*sizeof(dirEntry));
+        loadDirEntries(tempDirEntries, 6);
     }
     
 
@@ -74,8 +78,7 @@ dirEntry parsePath(const char *pathname, int* entryIndex)
         }else if(exists == 1){
             if(tokenCounter != tokenIndex - 1){
                 //Load the next directory DE
-                LBAread(DEBuffer,6,tempDirEntries[*entryIndex].location);
-                memcpy(&tempDirEntries, DEBuffer, 51*sizeof(dirEntry));
+                loadDirEntries(tempDirEntries, tempDirEntries[*entryIndex].location);
                 exists = 0;
                 tokenCounter++;
             }else{
@@ -94,6 +97,8 @@ dirEntry parsePath(const char *pathname, int* entryIndex)
     return tempDE;
 
 }
+
+
 
 
 // beginings of getcwd
