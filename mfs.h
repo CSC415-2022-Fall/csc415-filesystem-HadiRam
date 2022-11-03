@@ -62,8 +62,8 @@ char * cwdPath;
 dirEntry * cwdEntries;
 
 
-//parse path function
-int parsePath(const char *pathname);
+//parse path function return DirEntry of the file/directory in Dir [n-1]
+dirEntry parsePath(const char *pathname, int* entryIndex);
 
 // Key directory functions
 int fs_mkdir(const char *pathname, mode_t mode);

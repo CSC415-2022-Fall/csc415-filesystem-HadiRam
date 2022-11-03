@@ -5,19 +5,19 @@
 #include <string.h>
 
 
-char *delim = "/";
+
 
 //function to parse a pathname to check for validity.
 //returns error if invalid path (-2)
 //returns -1 if path is valid but the
 //returns index of n in dir(n-1)
-int parsePath(const char *pathname)
+dirEntry parsePath(const char *pathname, int* entryIndex)
 {
-
+    char *delim = "/";
     char * tempPath = cwdPath;
     dirEntry* tempDirEntries = malloc(51*sizeof(dirEntry));
     char * DEBuffer = malloc(6*512);
-    //malloc(51*sizeof(dirEntry));
+    dirEntry tempDE;
 
     //if its absolute, the first character is a slash.
     //Check if path is relative and make it absolute
@@ -49,7 +49,6 @@ int parsePath(const char *pathname)
     //Check if path exists
     int exists = 0;
     int tokenCounter = 0;
-    int entryIndex = -2;
 
     while(pathTokens[tokenCounter] != NULL){
         for(int i = 0; i < 51; i++){
@@ -75,12 +74,13 @@ int parsePath(const char *pathname)
         }else if(exists == 1){
             if(tokenCounter != tokenIndex - 1){
                 //Load the next directory DE
-                LBAread(DEBuffer,6,tempDirEntries[entryIndex].location);
+                LBAread(DEBuffer,6,tempDirEntries[*entryIndex].location);
                 memcpy(&tempDirEntries, DEBuffer, 51*sizeof(dirEntry));
                 exists = 0;
                 tokenCounter++;
             }else{
                 //Found the file/directory and return the DE index of Dir[n-1]
+                tempDE = tempDirEntries[*entryIndex];
                 break;
             }
         }
@@ -90,7 +90,8 @@ int parsePath(const char *pathname)
     free(tempDirEntries);
     free(DEBuffer);
 
-    return entryIndex;
+
+    return tempDE;
 
 }
 
