@@ -1,6 +1,7 @@
 #include "mfs.h"
 #include "b_io.h"
 #include "fsLow.h"
+#include "dirEntry.h"
 #include <string.h>
 
 char *delim = "/";

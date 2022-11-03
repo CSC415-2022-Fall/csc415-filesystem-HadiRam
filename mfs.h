@@ -21,6 +21,7 @@
 #include "b_io.h"
 
 #include <dirent.h>
+#include "dirEntry.h"
 #define FT_REGFILE	DT_REG
 #define FT_DIRECTORY DT_DIR
 #define FT_LINK	DT_LNK
@@ -56,6 +57,13 @@ typedef struct
 	uint64_t	directoryStartLocation;		/*Starting LBA of directory */
 	} fdDir;
 
+//Global variable for working directory
+char * cwdPath;
+dirEntry * cwdEntries;
+
+
+//parse path function
+int parsePath(const char *pathname);
 
 // Key directory functions
 int fs_mkdir(const char *pathname, mode_t mode);
