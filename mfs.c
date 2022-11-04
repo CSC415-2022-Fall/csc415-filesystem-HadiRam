@@ -12,6 +12,7 @@ void loadDirEntries(dirEntry* DEArray, int location){
     memcpy(&DEArray, DEBuffer, 51*sizeof(dirEntry));
 }
 
+//function that takes a path, and returns the path excluding the last element.
 char * getParentDirectory(char *path){
   const char *delim = "/";
   char tempPath[strlen(path)+1];
@@ -45,6 +46,32 @@ char * getParentDirectory(char *path){
   
 
 }
+
+//function that gets the last element within a path
+//example: pass in "/hadi/desktop/folder", returns "folder".
+char * getLastPathElement(char *path){
+  const char *delim = "/";
+  char tempPath[strlen(path)+1];
+
+  strcpy(tempPath, path);
+  
+  char *token = strtok(tempPath, delim);
+  char *pathTokens[64];
+
+  int tokenIndex = 0;
+  while (token != NULL)
+  {
+    pathTokens[tokenIndex] = token;
+    token = strtok(NULL, delim);
+    tokenIndex++;
+  }
+
+  char * lastPathElement = pathTokens[tokenIndex-1];
+
+  return lastPathElement;
+}
+
+
 
 //function to parse a pathname to check for validity.
 //returns error if invalid path (-2)
@@ -90,6 +117,8 @@ dirEntry parsePath(const char *pathname, int* entryIndex)
     int tokenCounter = 0;
 
     while(pathTokens[tokenCounter] != NULL){
+        //check if dir is free and the name matches the element within the path.
+        //if both are true, initialize the entryIndex, and make exists = 1.
         for(int i = 0; i < 51; i++){
             if(tempDirEntries[i].dirType != -1
              && strcmp(tempDirEntries[i].name, pathTokens[tokenCounter]) == 0){
@@ -147,6 +176,7 @@ char *fs_getcwd(char *pathname, size_t size)
     return pathname;
 }
 
+<<<<<<< Updated upstream
 //setting current working directory
 int fs_setcwd(char *pathname)
 {
@@ -163,12 +193,25 @@ int fs_setcwd(char *pathname)
     //success
     return 0;
 }
+=======
+
+>>>>>>> Stashed changes
 int fs_mkdir(const char *pathname, mode_t mode){
+
+//use parsepath to check
+//dirEntry dir = parsePath(pathname, 0);
+//char* test = dir.dirType;
+
+//Get the path excluding the last directory/file.
 char * parentPath = getParentDirectory(pathname);
 
-//fs_setcwd()
+//Get the last element in the path
+char * lastElementOfPath = getLastPathElement(pathname);
 
-//look for a free directory entry,by looping through cwdEntries.dirType = -1
+//Set the parent path to the current working directory.
+fs_setcwd(parentPath);
+
+//look for a free directory entry,by looping through cwdEntries[i].dirType = -1
 //once found, set the name, to new file name (last element of passed path)
 //set dir type type 1, set size to sizeOf(sizeof(dirEntry) * numOfDirEntries)
 //set location to 6 free blocks, using bitmap functions which returns index.
