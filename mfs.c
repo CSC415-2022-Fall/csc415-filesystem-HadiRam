@@ -137,7 +137,31 @@ dirEntry parsePath(const char *pathname, int* entryIndex)
 // beginings of getcwd
 char *fs_getcwd(char *pathname, size_t size)
 {
+    //buffer is pathname, size is size
+    //checking if the path fits within the buffer size 
+    if(strlen(cwdPath)>size)
+    {
+        return NULL;
+    }
+    strcpy(pathname,cwdPath);
     return pathname;
+}
+
+//setting current working directory
+int fs_setcwd(char *pathname)
+{
+    //check if the path exists
+
+    if(parsePath(pathname) == 
+
+    //set both global variables
+
+    //make buffer
+    //lba read into buffer, dirEntry.location.
+    //memcpy(&cwdEntries, DEBuffer, 51*sizeof(dirEntry))
+    
+    //success
+    return 0;
 }
 int fs_mkdir(const char *pathname, mode_t mode){
 char * parentPath = getParentDirectory(pathname);
