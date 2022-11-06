@@ -176,26 +176,32 @@ char *fs_getcwd(char *pathname, size_t size)
     return pathname;
 }
 
-<<<<<<< Updated upstream
 //setting current working directory
 int fs_setcwd(char *pathname)
 {
     //check if the path exists
+    int index;
+    parsePath(pathname, &index);
 
-    if(parsePath(pathname) == 
+    if(index >= 0){ 
 
     //set both global variables
 
     //make buffer
+    dirEntry* tempDirEntry = malloc(51*sizeof(dirEntry));
+
     //lba read into buffer, dirEntry.location.
+    LBAread(tempDirEntry,6,6);
     //memcpy(&cwdEntries, DEBuffer, 51*sizeof(dirEntry))
-    
+    memcpy(&cwdEntries,tempDirEntry,51*sizeof(dirEntry));
     //success
     return 0;
-}
-=======
+    }
 
->>>>>>> Stashed changes
+    //if fails
+    return -1;
+}
+
 int fs_mkdir(const char *pathname, mode_t mode){
 
 //use parsepath to check
