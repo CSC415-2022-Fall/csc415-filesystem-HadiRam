@@ -57,7 +57,6 @@ typedef struct
 	uint64_t	directoryStartLocation;		/*Starting LBA of directory */
 	dirEntry* dirPointer;
 	int dirSize;
-	
 
 	} fdDir;
 

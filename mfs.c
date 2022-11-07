@@ -176,10 +176,14 @@ fdDir * fs_opendir(const char *pathname){
             return NULL;
         }
         fdDir* fd = malloc(sizeof(fdDir));
-        fd->d_reclen = sizeof(fdDir);
+
+        fd->dirPointer = malloc(51*sizeof(dirEntry));
         loadDirEntries(fd->dirPointer, tempDE->location);
+
+        fd->d_reclen = sizeof(fdDir);
         fd->directoryStartLocation = tempDE->location;
         fd->dirEntryPosition = 0;
+        fd->dirSize = (tempDE->size)/((int) sizeof(dirEntry));
         return fd;
     }else{
         printf("Invalid path\n");
@@ -187,6 +191,33 @@ fdDir * fs_opendir(const char *pathname){
     }
 }
 
+struct fs_diriteminfo *fs_readdir(fdDir *dirp){
+    struct fs_diriteminfo* ii;
+    ii = NULL;
+
+    for(int i = dirp->dirEntryPosition; i < dirp->dirSize; i++){
+        if(dirp->dirPointer[i].dirType != -1){
+            strcpy(ii->d_name, dirp->dirPointer[i].name);
+            ii->d_reclen = (int) sizeof(struct fs_diriteminfo);
+            if(dirp->dirPointer[i].dirType == 1){
+                ii->fileType = '1';
+            }else{
+                ii->fileType = '0';
+            }
+            dirp->dirEntryPosition += 1;
+            //EXIT LOOP CONDITION
+            i = dirp->dirSize;
+        }
+    }
+
+    return ii;
+}
+
+int fs_closedir(fdDir *dirp){
+    free(dirp->dirPointer);
+    free(dirp);
+    dirp = NULL;
+}
 
 // beginings of getcwd
 char *fs_getcwd(char *pathname, size_t size)
