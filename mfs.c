@@ -164,6 +164,27 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
 }
 
 
+fdDir * fs_opendir(const char *pathname){
+    int index;
+    dirEntry* tempDE = parsePath(pathname, &index);
+    if(index >= 0){
+        if(tempDE->dirType != 1){
+            printf("Not a directory\n");
+            return NULL;
+        }
+        fdDir* fd = malloc(sizeof(fdDir));
+        fd->d_reclen = sizeof(fdDir);
+        loadDirEntries(fd->dirPointer, tempDE->location);
+        fd->directoryStartLocation = tempDE->location;
+        fd->dirEntryPosition = 0;
+        return fd;
+    }else{
+        printf("Invalid path\n");
+        return NULL;
+    }
+}
+
+
 // beginings of getcwd
 char *fs_getcwd(char *pathname, size_t size)
 {
@@ -189,7 +210,7 @@ int fs_setcwd(char *pathname)
     //set both global variables
 
     //make buffer
-    
+
     //lba read into buffer, dirEntry.location.
     loadDirEntries(cwdEntries, cwdDE->location);
     
