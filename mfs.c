@@ -77,14 +77,15 @@ char * getLastPathElement(char *path){
 //returns error if invalid path (-2)
 //returns -1 if path is valid but the
 //returns index of n in dir(n-1)
-dirEntry parsePath(const char *pathname, int* entryIndex)
+dirEntry* parsePath(const char *pathname, int* entryIndex)
 {
     char *delim = "/";
     char tempPath[strlen(cwdPath)+1];
     strcpy(tempPath,cwdPath);
     dirEntry* tempDirEntries = malloc(51*sizeof(dirEntry));
     char * DEBuffer = malloc(6*512);
-    dirEntry tempDE;
+    dirEntry* tempDE = malloc(sizeof(tempDE));
+    tempDE = NULL;
 
     //if its absolute, the first character is a slash.
     //Check if path is relative and make it absolute
@@ -181,19 +182,17 @@ int fs_setcwd(char *pathname)
 {
     //check if the path exists
     int index;
-    parsePath(pathname, &index);
+    dirEntry* cwdDE = parsePath(pathname, &index);
 
     if(index >= 0){ 
 
     //set both global variables
 
     //make buffer
-    dirEntry* tempDirEntry = malloc(51*sizeof(dirEntry));
-
+    
     //lba read into buffer, dirEntry.location.
-    LBAread(tempDirEntry,6,6);
-    //memcpy(&cwdEntries, DEBuffer, 51*sizeof(dirEntry))
-    memcpy(&cwdEntries,tempDirEntry,51*sizeof(dirEntry));
+    loadDirEntries(cwdEntries, cwdDE->location);
+    
     //success
     return 0;
     }
