@@ -230,10 +230,6 @@ int fs_setcwd(char *pathname)
 //returns -1 if there was an error and directory was not created.
 int fs_mkdir(const char *pathname, mode_t mode){
 
-//use parsepath to check
-//dirEntry dir = parsePath(pathname, 0);
-//char* test = dir.dirType;
-
 //Get the path excluding the last directory/file.
 char * parentPath = getParentDirectory(pathname);
 
@@ -246,12 +242,6 @@ if(fs_setcwd(parentPath) == -1){
     return -1;
 }
 
-/*look for a free directory entry,by looping through cwdEntries[i].dirType = -1
-once found, set the name, to new file name (last element of passed path)
-set dir type type 1, set size to sizeOf(sizeof(dirEntry) * numOfDirEntries)
-set location to 6 free blocks, using bitmap functions which returns index.
-Also lbawrite to that index which is the location of the 6 free blocks.
-cwdEntries[0] is . (itself), which will be set to the parent of the new directory ..*/
 
 //cwdEntries is set using the parent path, now these entries will be
 //looped through to find an entry ina  free state.
@@ -270,6 +260,7 @@ for(int i = 0; i < numOfDirEntries; i++){
         getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
         time(&cwdEntries[i].created);
 		time(&cwdEntries[i].lastModified);
+        cwdEntries[0].size += (int)sizeof(dirEntry);
         i = 52;
     }
 
@@ -288,24 +279,27 @@ dirEntries[i].location = -1;
 
 //Set up the "." Directory Entry
 dirEntries[0].name = ".";
-dirEntries[0].size = (int) numOfDirEntries*sizeof(dirEntry);
+dirEntries[0].size = (int)(sizeof(dirEntry)*2);
 // 1 for Directory type directory Entry
 dirEntries[0].dirType = 1;
-dirEntries[0].location = freeBlockIndex;
+dirEntries[0].location = cwdEntries[indexOfNewDirEntry].location;
 //Setting the time created and last modified to the current time
 time(&dirEntries[0].created);
 time(&dirEntries[0].lastModified);
 
 //Set up the ".." Directory Entry, repeat the step
-newDirEntry[1].name = "..";
-newDirEntry[1].size = (int) numOfDirEntries*sizeof(dirEntry);
-newDirEntry[1].dirType = 1;
-newDirEntry[1].location = freeBlockIndex;
-time(&newDirEntry[1].created);
-time(&newDirEntry[1].lastModified);
+dirEntries[1].name = "..";
+dirEntries[1].size = cwdEntries[0].size;
+// 1 for Directory type directory Entry
+dirEntries[1].dirType = cwdEntries[0].dirType;
+dirEntries[1].location = cwdEntries[0].location;
+//Setting the time created and last modified to the current time
+dirEntries[1].created = cwdEntries[0].created;
+dirEntries[1].lastModified = cwdEntries[0].lastModified;
 
-//Writing the root Directory into disk
-LBAwrite(newDirEntry, 6, freeBlockIndex);
+//Writing the cwd and new dir entry to disk
+LBAwrite(dirEntries,6,dirEntries[0].location);
+LBAwrite(cwdEntries,6,cwdEntries[indexOfNewDirEntry].location);
 
 //return 0 on successful creation of new directory.
 return 0;
