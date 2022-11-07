@@ -313,3 +313,41 @@ return 0;
 }
 
 
+
+
+
+//---------------isFile----------------------
+//return 1 if file, 0 otherwise
+int fs_isFile(char * filename)
+{
+    //if filename is a path, we have to parse it
+    
+    int index;
+
+    dirEntry* cwdDE = parsePath(filename, &index);
+
+    if(index >= 0)
+    {
+        if(cwdDE->dirType == 0)
+        {
+            printf("It is a valid file");
+            return 1;
+        }
+        else {
+            printf("Not a file");
+            return 0;
+        }
+    }
+
+    //if filename is a file within a current working directory
+
+    if(cwdEntries->dirType == 0 )
+    {
+            printf("It is a valid file");
+            return 1;
+        }
+        else {
+            printf("Not a file");
+            return 0;
+        }
+}
