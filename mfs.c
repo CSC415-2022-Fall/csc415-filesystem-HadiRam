@@ -324,24 +324,41 @@ int fs_isFile(char * filename)
     {
         if(cwdDE->dirType == 0)
         {
-            printf("It is a valid file");
+            printf("It is a valid file\n");
             return 1;
         }
         else {
-            printf("Not a file");
+            printf("Not a file\n");
             return 0;
         }
+    } else {
+        printf("Invalid path\n");
+        return -1;
     }
 
-    //if filename is a file within a current working directory
+    
+}
 
-    if(cwdEntries->dirType == 0 )
+
+//------------- fs_isDir --------------
+
+int fs_isDir(char * pathname)
+{
+    int index = fs_isFile(pathname);
+
+    if (index == 1)
     {
-            printf("It is a valid file");
-            return 1;
-        }
-        else {
-            printf("Not a file");
-            return 0;
-        }
+        printf("Its a directory\n");
+        return 0;
+    }
+    else if(index == 0) {
+        printf("Not a directory\n");
+        return 1;
+    }
+    else {
+        printf("Invalid path\n");
+        return -1;
+    }
+
+
 }
