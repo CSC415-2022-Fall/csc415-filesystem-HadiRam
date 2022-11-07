@@ -2,6 +2,7 @@
 #include "b_io.h"
 #include "fsLow.h"
 #include "dirEntry.h"
+#include "vcb.h"
 #include <string.h>
 
 
@@ -224,6 +225,9 @@ int fs_setcwd(char *pathname)
     return -1;
 }
 
+
+//returns 0 if directory was succesfully created, at specified path.
+//returns -1 if there was an error and directory was not created.
 int fs_mkdir(const char *pathname, mode_t mode){
 
 //use parsepath to check
@@ -237,24 +241,75 @@ char * parentPath = getParentDirectory(pathname);
 char * lastElementOfPath = getLastPathElement(pathname);
 
 //Set the parent path to the current working directory.
-fs_setcwd(parentPath);
+if(fs_setcwd(parentPath) == -1){
+    printf("Error, failed to set parent path as current working directory.");
+    return -1;
+}
 
-//look for a free directory entry,by looping through cwdEntries[i].dirType = -1
-//once found, set the name, to new file name (last element of passed path)
-//set dir type type 1, set size to sizeOf(sizeof(dirEntry) * numOfDirEntries)
-//set location to 6 free blocks, using bitmap functions which returns index.
-//Also lbawrite to that index which is the location of the 6 free blocks.
-//cwdEntries[0] is . (itself), which will be set to the parent of the new directory ..
+/*look for a free directory entry,by looping through cwdEntries[i].dirType = -1
+once found, set the name, to new file name (last element of passed path)
+set dir type type 1, set size to sizeOf(sizeof(dirEntry) * numOfDirEntries)
+set location to 6 free blocks, using bitmap functions which returns index.
+Also lbawrite to that index which is the location of the 6 free blocks.
+cwdEntries[0] is . (itself), which will be set to the parent of the new directory ..*/
 
-int numOfDirEntries = 51; //6 blocks
-dirEntry* newDir = malloc(numOfDirEntries*sizeof(dirEntry));
-//get directory of n-1, u wanna make it in n 
+//cwdEntries is set using the parent path, now these entries will be
+//looped through to find an entry ina  free state.
+
+int numOfDirEntries = 51; 
+int indexOfNewDirEntry;
+
 for(int i = 0; i < numOfDirEntries; i++){
-newDir[i].name = malloc(32*sizeof(char));
-newDir[i].dirType = -1; //free state
-newDir[i].size = 0;
-newDir[i].location = i;
-}
+    //if the dir is free, begin creating the new directory.
+    if(cwdEntries[i].dirType == -1){
+        indexOfNewDirEntry = i;
+        cwdEntries[i].name = lastElementOfPath;
+        cwdEntries[i].dirType = 1;
+        cwdEntries[i].size = (int)(sizeof(dirEntry)*2);
+        cwdEntries[i].location = 
+        getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
+        time(&cwdEntries[i].created);
+		time(&cwdEntries[i].lastModified);
+        i = 52;
+    }
 
 }
+
+//Parse path on passed path, to get the directry entry of the new directroy.
+dirEntry * dirEntries = malloc(51*sizeof(dirEntry));
+loadDirEntries(dirEntries, cwdEntries[indexOfNewDirEntry].location);
+
+for(int i = 0; i < numOfDirEntries; i++){
+dirEntries[i].name = malloc(32*sizeof(char));
+dirEntries[i].dirType = -1; //free state
+dirEntries[i].size = 0;
+dirEntries[i].location = -1;
+}
+
+//Set up the "." Directory Entry
+dirEntries[0].name = ".";
+dirEntries[0].size = (int) numOfDirEntries*sizeof(dirEntry);
+// 1 for Directory type directory Entry
+dirEntries[0].dirType = 1;
+dirEntries[0].location = freeBlockIndex;
+//Setting the time created and last modified to the current time
+time(&dirEntries[0].created);
+time(&dirEntries[0].lastModified);
+
+//Set up the ".." Directory Entry, repeat the step
+newDirEntry[1].name = "..";
+newDirEntry[1].size = (int) numOfDirEntries*sizeof(dirEntry);
+newDirEntry[1].dirType = 1;
+newDirEntry[1].location = freeBlockIndex;
+time(&newDirEntry[1].created);
+time(&newDirEntry[1].lastModified);
+
+//Writing the root Directory into disk
+LBAwrite(newDirEntry, 6, freeBlockIndex);
+
+//return 0 on successful creation of new directory.
+return 0;
+
+}
+
 

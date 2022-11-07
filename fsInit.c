@@ -90,7 +90,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			rootDir[i].name = malloc(32*sizeof(char));
 			rootDir[i].dirType = -1; //free state
 			rootDir[i].size = 0;
-			rootDir[i].location = i;
+			rootDir[i].location = -1;
 		}
 		int freeBlockIndex = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
 		//Update bitmap on disk
