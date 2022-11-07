@@ -85,7 +85,8 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
     strcpy(tempPath,cwdPath);
     dirEntry* tempDirEntries = malloc(51*sizeof(dirEntry));
     char * DEBuffer = malloc(6*512);
-    dirEntry* tempDE = malloc(sizeof(tempDE));
+    
+    dirEntry* tempDE= malloc(sizeof(tempDE));
     tempDE = NULL;
 
     //if its absolute, the first character is a slash.
@@ -149,7 +150,7 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
                 tokenCounter++;
             }else{
                 //Found the file/directory and return the DE index of Dir[n-1]
-                tempDE = tempDirEntries[*entryIndex];
+                tempDE = &tempDirEntries[*entryIndex];
                 break;
             }
         }
@@ -159,6 +160,7 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
     free(tempDirEntries);
     free(DEBuffer);
 
+    
 
     return tempDE;
 
