@@ -374,18 +374,18 @@ int fs_isFile(char * filename)
 
 
 //------------- fs_isDir --------------
-
+//return 1 if directory, 0 otherwise
 int fs_isDir(char * pathname)
 {
     int index = fs_isFile(pathname);
 
     if (index == 1)
     {
-        printf("Its a directory\n");
+        printf("Not a directory. Its a file\n");
         return 0;
     }
     else if(index == 0) {
-        printf("Not a directory\n");
+        printf("Its a directory.\n");
         return 1;
     }
     else {
