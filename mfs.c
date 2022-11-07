@@ -209,10 +209,12 @@ int fs_setcwd(char *pathname)
 
     //set both global variables
 
-    //make buffer
-
+    //setting cwdEntries
     //lba read into buffer, dirEntry.location.
     loadDirEntries(cwdEntries, cwdDE->location);
+
+    //setting cwdPath
+    strcpy(cwdPath,pathname);
     
     //success
     return 0;
