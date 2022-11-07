@@ -29,7 +29,7 @@
 #include "dirEntry.h"
 
 
-#define MAGIC_NUMBER 0xEFB112C2EFB112C1
+#define MAGIC_NUMBER 0xEFB112C2EFB112C2
 
 //Redeclaring the vcb global variable
 VCB vcb;
@@ -97,7 +97,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		updateBitMap();
 		//Set up the "." Directory Entry
 		rootDir[0].name = ".";
-		rootDir[0].size = (int) numOfDirEntries*sizeof(dirEntry);
+		rootDir[0].size = (int) 2*sizeof(dirEntry);
 		// 1 for Directory type directory Entry
 		rootDir[0].dirType = 1;
 		rootDir[0].location = freeBlockIndex;
@@ -107,7 +107,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 		//Set up the ".." Directory Entry, repeat the step
 		rootDir[1].name = "..";
-		rootDir[1].size = (int) numOfDirEntries*sizeof(dirEntry);
+		rootDir[1].size = (int) 2*sizeof(dirEntry);
 		rootDir[1].dirType = 1;
 		rootDir[1].location = freeBlockIndex;
 		time(&rootDir[1].created);
