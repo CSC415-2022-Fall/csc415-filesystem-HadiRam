@@ -223,12 +223,8 @@ int fs_closedir(fdDir *dirp){
 char *fs_getcwd(char *pathname, size_t size)
 {
     //buffer is pathname, size is size
-    //checking if the path fits within the buffer size 
-    if(strlen(cwdPath)>size)
-    {
-        return NULL;
-    }
-    strcpy(pathname,cwdPath);
+    
+    strncpy(pathname,cwdPath,size);
     return pathname;
 }
 
