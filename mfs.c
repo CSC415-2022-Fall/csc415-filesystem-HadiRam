@@ -391,3 +391,23 @@ int fs_isDir(char * pathname)
 
 
 }
+
+
+//----------------fs_stat()----------------
+int fs_stat(const char *path, struct fs_stat *buf)
+{
+    //first parse the path
+    int index;
+    dirEntry * tempDir;
+    tempDir = parsePath(path, &index);
+    
+    //path is valid
+    if (index >=0){
+        loadDirEntries(cwdEntries,tempDir->location);
+        buf ->st_accesstime = cwdEntries->lastModified;
+        buf->st_size = cwdEntries->size;
+        buf->st_createtime = cwdEntries->created;
+        buf->st_modtime = cwdEntries->lastModified;
+    }
+
+}
