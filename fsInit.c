@@ -87,7 +87,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		dirEntry* rootDir = malloc(numOfDirEntries*sizeof(dirEntry));
 		//Setting the directory entries to their free state
 		for(int i = 0; i < numOfDirEntries; i++){
-			rootDir[i].name = malloc(32*sizeof(char));
+			rootDir[i].name[0] = '\0';
 			rootDir[i].dirType = -1; //free state
 			rootDir[i].size = 0;
 			rootDir[i].location = -1;
@@ -96,7 +96,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		//Update bitmap on disk
 		updateBitMap();
 		//Set up the "." Directory Entry
-		rootDir[0].name = ".";
+		strcpy(rootDir[0].name, ".");
 		rootDir[0].size = (int) 2*sizeof(dirEntry);
 		// 1 for Directory type directory Entry
 		rootDir[0].dirType = 1;
@@ -106,7 +106,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		time(&rootDir[0].lastModified);
 
 		//Set up the ".." Directory Entry, repeat the step
-		rootDir[1].name = "..";
+		strcpy(rootDir[1].name, "..");
 		rootDir[1].size = (int) 2*sizeof(dirEntry);
 		rootDir[1].dirType = 1;
 		rootDir[1].location = freeBlockIndex;

@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "vcb.h": "c"
+        "vcb.h": "c",
+        "direntry.h": "c",
+        "stdio.h": "c"
     }
 }

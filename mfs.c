@@ -282,7 +282,7 @@ for(int i = 0; i < numOfDirEntries; i++){
     //if the dir is free, begin creating the new directory.
     if(cwdEntries[i].dirType == -1){
         indexOfNewDirEntry = i;
-        cwdEntries[i].name = lastElementOfPath;
+        strcpy(cwdEntries[i].name,lastElementOfPath);
         cwdEntries[i].dirType = 1;
         cwdEntries[i].size = (int)(sizeof(dirEntry)*2);
         cwdEntries[i].location = 
@@ -300,14 +300,14 @@ dirEntry * dirEntries = malloc(51*sizeof(dirEntry));
 loadDirEntries(dirEntries, cwdEntries[indexOfNewDirEntry].location);
 
 for(int i = 0; i < numOfDirEntries; i++){
-dirEntries[i].name = malloc(32*sizeof(char));
-dirEntries[i].dirType = -1; //free state
-dirEntries[i].size = 0;
-dirEntries[i].location = -1;
+    dirEntries[i].name[0] = '\0';
+    dirEntries[i].dirType = -1; //free state
+    dirEntries[i].size = 0;
+    dirEntries[i].location = -1;
 }
 
 //Set up the "." Directory Entry
-dirEntries[0].name = ".";
+strcpy(dirEntries[0].name, ".");
 dirEntries[0].size = (int)(sizeof(dirEntry)*2);
 // 1 for Directory type directory Entry
 dirEntries[0].dirType = 1;
@@ -317,7 +317,7 @@ time(&dirEntries[0].created);
 time(&dirEntries[0].lastModified);
 
 //Set up the ".." Directory Entry, repeat the step
-dirEntries[1].name = "..";
+strcpy(dirEntries[1].name, "..");
 dirEntries[1].size = cwdEntries[0].size;
 // 1 for Directory type directory Entry
 dirEntries[1].dirType = cwdEntries[0].dirType;
