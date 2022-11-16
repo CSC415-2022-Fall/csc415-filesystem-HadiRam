@@ -257,87 +257,85 @@ int fs_setcwd(char *pathname)
 
 //returns 0 if directory was succesfully created, at specified path.
 //returns -1 if there was an error and directory was not created.
-int fs_mkdir(const char *pathname, mode_t mode){
+int fs_mkdir(const char *pathname, mode_t mode)
+{
 
-//Get the path excluding the last directory/file.
-char * parentPath = getParentDirectory(pathname);
+    // Get the path excluding the last directory/file.
+    char *parentPath = getParentDirectory(pathname);
 
-//Get the last element in the path
-char * lastElementOfPath = getLastPathElement(pathname);
+    // Get the last element in the path
+    char *lastElementOfPath = getLastPathElement(pathname);
 
-//Set the parent path to the current working directory.
-if(fs_setcwd(parentPath) == -1){
-    printf("Error, failed to set parent path as current working directory.");
-    return -1;
-}
-
-
-//cwdEntries is set using the parent path, now these entries will be
-//looped through to find an entry ina  free state.
-
-int numOfDirEntries = 51; 
-int indexOfNewDirEntry;
-
-for(int i = 0; i < numOfDirEntries; i++){
-    //if the dir is free, begin creating the new directory.
-    if(cwdEntries[i].dirType == -1){
-        indexOfNewDirEntry = i;
-        strcpy(cwdEntries[i].name,lastElementOfPath);
-        cwdEntries[i].dirType = 1;
-        cwdEntries[i].size = (int)(sizeof(dirEntry)*2);
-        cwdEntries[i].location = 
-        getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
-        time(&cwdEntries[i].created);
-		time(&cwdEntries[i].lastModified);
-        cwdEntries[0].size += (int)sizeof(dirEntry);
-        i = 52;
+    // Set the parent path to the current working directory.
+    if (fs_setcwd(parentPath) == -1)
+    {
+        printf("Error, failed to set parent path as current working directory.");
+        return -1;
     }
 
+    // cwdEntries is set using the parent path, now these entries will be
+    // looped through to find an entry ina  free state.
+
+    int numOfDirEntries = 51;
+    int indexOfNewDirEntry;
+
+    for (int i = 0; i < numOfDirEntries; i++)
+    {
+        // if the dir is free, begin creating the new directory.
+        if (cwdEntries[i].dirType == -1)
+        {
+            indexOfNewDirEntry = i;
+            strcpy(cwdEntries[i].name, lastElementOfPath);
+            cwdEntries[i].dirType = 1;
+            cwdEntries[i].size = (int)(sizeof(dirEntry) * 2);
+            cwdEntries[i].location =
+                getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
+            time(&cwdEntries[i].created);
+            time(&cwdEntries[i].lastModified);
+            cwdEntries[0].size += (int)sizeof(dirEntry);
+            i = 52;
+        }
+    }
+
+    // Parse path on passed path, to get the directry entry of the new directroy.
+    dirEntry *dirEntries = malloc(51 * sizeof(dirEntry));
+    loadDirEntries(dirEntries, cwdEntries[indexOfNewDirEntry].location);
+
+    for (int i = 0; i < numOfDirEntries; i++)
+    {
+        dirEntries[i].name[0] = '\0';
+        dirEntries[i].dirType = -1; // free state
+        dirEntries[i].size = 0;
+        dirEntries[i].location = -1;
+    }
+
+    // Set up the "." Directory Entry
+    strcpy(dirEntries[0].name, ".");
+    dirEntries[0].size = (int)(sizeof(dirEntry) * 2);
+    // 1 for Directory type directory Entry
+    dirEntries[0].dirType = 1;
+    dirEntries[0].location = cwdEntries[indexOfNewDirEntry].location;
+    // Setting the time created and last modified to the current time
+    time(&dirEntries[0].created);
+    time(&dirEntries[0].lastModified);
+
+    // Set up the ".." Directory Entry, repeat the step
+    strcpy(dirEntries[1].name, "..");
+    dirEntries[1].size = cwdEntries[0].size;
+    // 1 for Directory type directory Entry
+    dirEntries[1].dirType = cwdEntries[0].dirType;
+    dirEntries[1].location = cwdEntries[0].location;
+    // Setting the time created and last modified to the current time
+    dirEntries[1].created = cwdEntries[0].created;
+    dirEntries[1].lastModified = cwdEntries[0].lastModified;
+
+    // Writing the cwd and new dir entry to disk
+    LBAwrite(dirEntries, 6, dirEntries[0].location);
+    LBAwrite(cwdEntries, 6, cwdEntries[indexOfNewDirEntry].location);
+
+    // return 0 on successful creation of new directory.
+    return 0;
 }
-
-//Parse path on passed path, to get the directry entry of the new directroy.
-dirEntry * dirEntries = malloc(51*sizeof(dirEntry));
-loadDirEntries(dirEntries, cwdEntries[indexOfNewDirEntry].location);
-
-for(int i = 0; i < numOfDirEntries; i++){
-    dirEntries[i].name[0] = '\0';
-    dirEntries[i].dirType = -1; //free state
-    dirEntries[i].size = 0;
-    dirEntries[i].location = -1;
-}
-
-//Set up the "." Directory Entry
-strcpy(dirEntries[0].name, ".");
-dirEntries[0].size = (int)(sizeof(dirEntry)*2);
-// 1 for Directory type directory Entry
-dirEntries[0].dirType = 1;
-dirEntries[0].location = cwdEntries[indexOfNewDirEntry].location;
-//Setting the time created and last modified to the current time
-time(&dirEntries[0].created);
-time(&dirEntries[0].lastModified);
-
-//Set up the ".." Directory Entry, repeat the step
-strcpy(dirEntries[1].name, "..");
-dirEntries[1].size = cwdEntries[0].size;
-// 1 for Directory type directory Entry
-dirEntries[1].dirType = cwdEntries[0].dirType;
-dirEntries[1].location = cwdEntries[0].location;
-//Setting the time created and last modified to the current time
-dirEntries[1].created = cwdEntries[0].created;
-dirEntries[1].lastModified = cwdEntries[0].lastModified;
-
-//Writing the cwd and new dir entry to disk
-LBAwrite(dirEntries,6,dirEntries[0].location);
-LBAwrite(cwdEntries,6,cwdEntries[indexOfNewDirEntry].location);
-
-//return 0 on successful creation of new directory.
-return 0;
-
-}
-
-
-
-
 
 //---------------isFile----------------------
 //return 1 if file, 0 otherwise
@@ -404,10 +402,27 @@ int fs_stat(const char *path, struct fs_stat *buf)
     //path is valid
     if (index >=0){
         loadDirEntries(cwdEntries,tempDir->location);
-        buf ->st_accesstime = cwdEntries->lastModified;
+        buf->st_accesstime = cwdEntries->lastModified;
         buf->st_size = cwdEntries->size;
         buf->st_createtime = cwdEntries->created;
         buf->st_modtime = cwdEntries->lastModified;
+
+        return 1; //success
     }
 
+    return -1;   //on failure
+}
+
+//----GetFileInfo()-------------
+
+dirEntry * GetFileInfo (char * fname)
+{
+    int index;
+    dirEntry *tempDir = parsePath(fname, &index);
+
+    if(index >=0){
+        return tempDir;
+    }
+
+    return NULL; //error
 }

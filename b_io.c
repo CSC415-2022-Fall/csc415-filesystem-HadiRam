@@ -26,12 +26,17 @@
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
 
+#define NUM_DIRECTORIES 51
+
 typedef struct b_fcb
 	{
 	/** TODO add al the information you need in the file control block **/
 	char * buf;		//holds the open file buffer
 	int index;		//holds the current position in the buffer
 	int buflen;		//holds how many valid bytes are in the buffer
+
+	dirEntry* fi; //holds the low level file info 
+
 	} b_fcb;
 	
 b_fcb fcbArray[MAXFCBS];
@@ -66,6 +71,7 @@ b_io_fd b_getFCB ()
 // Interface to open a buffered file
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
+// filename = /usr/manish/desktop/test.txt
 b_io_fd b_open (char * filename, int flags)
 	{
 	b_io_fd returnFd;
@@ -78,6 +84,55 @@ b_io_fd b_open (char * filename, int flags)
 	
 	returnFd = b_getFCB();				// get our own file descriptor
 										// check for error - all used FCB's
+
+	if (returnFd < 0)
+	{
+		return -1;
+	}
+	
+
+	dirEntry * tempDir;
+
+	int index;
+
+	tempDir = parsePath(filename,index);
+
+	if(GetFileInfo(filename) == NULL)
+	{
+		return -1;
+	}
+	// O_RDONLY, O_WRONLY, or O_RDWR
+	if(index >= 0 & flags == O_RDONLY | O_WRONLY | O_RDWR)
+	{
+
+		//malloc the buffer
+		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
+
+
+	} else if(index == -1 & flags == O_CREAT)//If the specified file does not exist, it may optionally (if O_CREAT
+       											//is specified in flags) be created by open().
+	{
+			// //
+			// char* fname;
+			// fname = getLastPathElement(filename);
+			// for (int i = 0; i < NUM_DIRECTORIES; i++)
+			// {
+			// 	// if the dir is free, begin creating the new directory.
+			// 	if (tempDir[i].dirType == -1)
+			// 	{
+			// 		// indexOfNewDirEntry = i;
+			// 		strcpy(tempDir[i].name, fname);
+			// 		tempDir[i].dirType = 0;
+			// 		//tempDir[i].size = 0;
+			// 		tempDir[i].location =
+			// 			getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
+			// 		time(&tempDir[i].created);
+			// 		time(&tempDir[i].lastModified);
+			// 		tempDir[0].size += (int)sizeof(dirEntry);
+			// 		i = 52;
+			// 	}
+			// }
+	}
 	
 	return (returnFd);						// all set
 	}

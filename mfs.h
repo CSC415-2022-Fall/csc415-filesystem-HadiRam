@@ -67,6 +67,7 @@ dirEntry * cwdEntries;
 
 //parse path function return DirEntry of the file/directory in Dir [n-1]
 dirEntry* parsePath(const char *pathname, int* entryIndex);
+void loadDirEntries(dirEntry* DEArray, int location);
 
 // Key directory functions
 int fs_mkdir(const char *pathname, mode_t mode);
@@ -99,6 +100,11 @@ struct fs_stat
 	};
 
 int fs_stat(const char *path, struct fs_stat *buf);
+
+dirEntry * GetFileInfo (char * fname);
+
+char * getLastPathElement(char *path);
+char * getParentDirectory(char *path);
 
 #endif
 
