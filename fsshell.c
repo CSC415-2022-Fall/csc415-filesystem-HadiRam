@@ -39,12 +39,12 @@
 #define CMDLS_ON	1
 #define CMDCP_ON	0
 #define CMDMV_ON	0
-#define CMDMD_ON	0
+#define CMDMD_ON	1
 #define CMDRM_ON	0
 #define CMDCP2L_ON	0
 #define CMDCP2FS_ON	0
-#define CMDCD_ON	0
-#define CMDPWD_ON	0
+#define CMDCD_ON	1
+#define CMDPWD_ON	1
 #define CMDTOUCH_ON	0
 #define CMDCAT_ON	0
 
@@ -196,6 +196,7 @@ int cmd_ls (int argcnt, char *argvec[])
 	
 	if (optind < argcnt)
 		{
+			
 		//processing arguments after options
 		for (int k = optind; k < argcnt; k++)
 			{
@@ -511,6 +512,7 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 int cmd_cd (int argcnt, char *argvec[])
 	{
 #if (CMDCD_ON == 1)	
+	
 	if (argcnt != 2)
 		{
 		printf ("Usage: cd path\n");
@@ -527,7 +529,9 @@ int cmd_cd (int argcnt, char *argvec[])
 			path[strlen(path) - 1] = 0;
 			}
 		}
+		
 	int ret = fs_setcwd (path);
+	
 	if (ret != 0)	//error
 		{
 		printf ("Could not change path to %s\n", path);

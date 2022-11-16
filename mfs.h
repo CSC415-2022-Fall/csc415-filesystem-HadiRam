@@ -34,7 +34,13 @@ typedef u_int32_t uint32_t;
 #endif
 
 
+//Global variable for working directory
 
+
+char * cwdPath;
+dirEntry * cwdEntries;
+
+void initGlobalVar();
 // This structure is returned by fs_readdir to provide the caller with information
 // about each file as it iterates through a directory
  struct fs_diriteminfo
@@ -60,14 +66,8 @@ typedef struct
 
 	} fdDir;
 
-//Global variable for working directory
-char * cwdPath;
-dirEntry * cwdEntries;
 
 
-//parse path function return DirEntry of the file/directory in Dir [n-1]
-dirEntry* parsePath(const char *pathname, int* entryIndex);
-void loadDirEntries(dirEntry* DEArray, int location);
 
 // Key directory functions
 int fs_mkdir(const char *pathname, mode_t mode);

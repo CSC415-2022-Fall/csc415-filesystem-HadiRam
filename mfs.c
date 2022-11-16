@@ -3,6 +3,7 @@
 #include "fsLow.h"
 #include "dirEntry.h"
 #include "vcb.h"
+#include "bitMap.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +14,17 @@ void loadDirEntries(dirEntry* DEArray, int location){
     char* DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
     LBAread(DEBuffer, DIRECTORY_BLOCKSIZE, location);
     memcpy(&DEArray, DEBuffer, MAX_DIRENT_SIZE*sizeof(dirEntry));
+}
+
+void initGlobalVar(){
+    cwdPath = malloc(256);
+    strcpy(cwdPath, "/");
+
+    cwdEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+    char* DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
+    LBAread(DEBuffer, DIRECTORY_BLOCKSIZE, 1);
+    memcpy(&cwdEntries, DEBuffer, MAX_DIRENT_SIZE*sizeof(dirEntry));
+    
 }
 
 //function that takes a path, and returns the path excluding the last element.
@@ -55,7 +67,9 @@ char * getParentDirectory(const char *pathname){
 
 //function that gets the last element within a path
 //example: pass in "/hadi/desktop/folder", returns "folder".
-char * getLastPathElement(char *path){
+char * getLastPathElement(const char *pathname){
+    char* path;
+    strcpy(path, pathname);
   const char *delim = "/";
   char tempPath[strlen(path)+1];
 
@@ -85,14 +99,20 @@ char * getLastPathElement(char *path){
 //returns index of n in dir(n-1)
 dirEntry* parsePath(const char *pathname, int* entryIndex)
 {
+    
     char *delim = "/";
     char tempPath[strlen(cwdPath)+1];
+    printf("HELLO\n");
     strcpy(tempPath, cwdPath);
+    
     dirEntry* tempDirEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
     char * DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
     
+
     dirEntry* tempDE= malloc(sizeof(tempDE));
     tempDE = NULL;
+
+    
 
     //if its absolute, the first character is a slash.
     //Check if path is relative and make it absolute
@@ -105,7 +125,7 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
         loadDirEntries(tempDirEntries, 6);
     }
     
-
+    
     //tokenize path with / as delimeter.
     char *token = strtok(tempPath, delim);
     char *pathTokens[64];
@@ -238,8 +258,9 @@ int fs_setcwd(char *pathname)
 {
     //check if the path exists
     int index;
+    
     dirEntry* cwdDE = parsePath(pathname, &index);
-
+    
     if(index >= 0){ 
 
     //set both global variables

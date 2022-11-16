@@ -137,7 +137,12 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	free(vcbBlock);
 	
+	//Initializing cwdPath and cwdEntries
+	initGlobalVar();
 	
+	
+	
+
 	return 0;
 	}
 	
