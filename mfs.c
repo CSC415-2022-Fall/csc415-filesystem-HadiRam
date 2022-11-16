@@ -4,17 +4,21 @@
 #include "dirEntry.h"
 #include "vcb.h"
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 //Helper Functions
 void loadDirEntries(dirEntry* DEArray, int location){
-    char* DEBuffer = malloc(6*512);
-    LBAread(DEBuffer, 6, location);
-    memcpy(&DEArray, DEBuffer, 51*sizeof(dirEntry));
+    char* DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
+    LBAread(DEBuffer, DIRECTORY_BLOCKSIZE, location);
+    memcpy(&DEArray, DEBuffer, MAX_DIRENT_SIZE*sizeof(dirEntry));
 }
 
 //function that takes a path, and returns the path excluding the last element.
-char * getParentDirectory(char *path){
+char * getParentDirectory(const char *pathname){
+    char* path;
+    strcpy(path, pathname);
   const char *delim = "/";
   char tempPath[strlen(path)+1];
 
@@ -41,11 +45,12 @@ char * getParentDirectory(char *path){
     
     strcat(pathOfParent, pathTokens[i]);
     strcat(pathOfParent, delim);
-  }
+  } 
 
-    return pathOfParent;
+    char * result;
+    strcpy(result, pathOfParent);
+    return result;
   
-
 }
 
 //function that gets the last element within a path
@@ -82,16 +87,16 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
 {
     char *delim = "/";
     char tempPath[strlen(cwdPath)+1];
-    strcpy(tempPath,cwdPath);
-    dirEntry* tempDirEntries = malloc(51*sizeof(dirEntry));
-    char * DEBuffer = malloc(6*512);
+    strcpy(tempPath, cwdPath);
+    dirEntry* tempDirEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+    char * DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
     
     dirEntry* tempDE= malloc(sizeof(tempDE));
     tempDE = NULL;
 
     //if its absolute, the first character is a slash.
     //Check if path is relative and make it absolute
-    if (strcmp(pathname[0], "/") != 0)
+    if (pathname[0] != '/')
     {
         strncat(tempPath, pathname, strlen(pathname));
         tempDirEntries = cwdEntries;
@@ -126,7 +131,7 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
             if(tempDirEntries[i].dirType != -1
              && strcmp(tempDirEntries[i].name, pathTokens[tokenCounter]) == 0){
                 exists = 1;
-                entryIndex = i;
+                *entryIndex = i;
                 i = 51;
             }
 
@@ -135,11 +140,11 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
         if(exists == 0){
             //Not the last element
             if(tokenCounter != tokenIndex - 1){
-                entryIndex = -2;
+                *entryIndex = -2;
                 break;
             }else{
                 printf("The path exists");
-                entryIndex = -1;
+                *entryIndex = -1;
                 break;
             }
         }else if(exists == 1){

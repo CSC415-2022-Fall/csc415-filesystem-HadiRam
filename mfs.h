@@ -101,10 +101,6 @@ struct fs_stat
 
 int fs_stat(const char *path, struct fs_stat *buf);
 
-dirEntry * GetFileInfo (char * fname);
-
-char * getLastPathElement(char *path);
-char * getParentDirectory(char *path);
 
 #endif
 

@@ -84,6 +84,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		//Initialize RootDirectory
 		//Our Directory Entry is 60 bytes long
 		int numOfDirEntries = 51; //6 blocks 
+		int sizeOfDirectory = 6; 
 		dirEntry* rootDir = malloc(numOfDirEntries*sizeof(dirEntry));
 		//Setting the directory entries to their free state
 		for(int i = 0; i < numOfDirEntries; i++){
@@ -93,8 +94,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			rootDir[i].location = -1;
 		}
 		int freeBlockIndex = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
-		//Update bitmap on disk
-		updateBitMap();
+		
+
 		//Set up the "." Directory Entry
 		strcpy(rootDir[0].name, ".");
 		rootDir[0].size = (int) 2*sizeof(dirEntry);
@@ -114,9 +115,13 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		time(&rootDir[1].lastModified);
 
 		//Writing the root Directory into disk
-		LBAwrite(rootDir, 6, freeBlockIndex);
+		LBAwrite(rootDir, sizeOfDirectory, freeBlockIndex);
 		//Writing the VCB back into disk
 		vcb.RootDir = freeBlockIndex;
+
+		//Update bitmap on disk
+		updateBitMap();
+		//Write VCB back onto disk
 		memcpy(vcbBlock, &vcb, sizeof(VCB));
 		LBAwrite(vcbBlock, 1, 0);
 

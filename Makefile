@@ -45,6 +45,7 @@ DEPS =
 # Add any additional objects to this list
 ADDOBJ= fsInit.o
 ADDOBJ1 = bitMap.o
+ADDOBJ2 = mfs.o
 ARCH = $(shell uname -m)
 
 ifeq ($(ARCH), aarch64)
@@ -53,7 +54,7 @@ else
 	ARCHOBJ=fsLow.o
 endif
 
-OBJ = $(ROOTNAME)$(HW)$(FOPTION).o $(ADDOBJ) $(ARCHOBJ) $(ADDOBJ1)
+OBJ = $(ROOTNAME)$(HW)$(FOPTION).o $(ADDOBJ) $(ARCHOBJ) $(ADDOBJ1) $(ADDOBJ2)
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS) 
@@ -62,7 +63,7 @@ $(ROOTNAME)$(HW)$(FOPTION): $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) -lm -l readline -l $(LIBS)
 
 clean:
-	rm $(ROOTNAME)$(HW)$(FOPTION).o $(ADDOBJ) $(ADDOBJ1) $(ROOTNAME)$(HW)$(FOPTION)
+	rm $(ROOTNAME)$(HW)$(FOPTION).o $(ADDOBJ) $(ADDOBJ1) $(ADDOBJ2) $(ROOTNAME)$(HW)$(FOPTION)
 
 run: $(ROOTNAME)$(HW)$(FOPTION)
 	./$(ROOTNAME)$(HW)$(FOPTION) $(RUNOPTIONS)

@@ -3,6 +3,8 @@
 
 #include <time.h>
 
+#define DIRECTORY_BLOCKSIZE 6
+#define MAX_DIRENT_SIZE 51
 
 //Directory Entry struct with the size of 60 bytes
 typedef struct dirEntry{
