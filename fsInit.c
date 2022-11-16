@@ -140,8 +140,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	//Initializing cwdPath and cwdEntries
 	initGlobalVar();
 	
-	
-	
 
 	return 0;
 	}

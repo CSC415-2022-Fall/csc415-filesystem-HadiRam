@@ -13,7 +13,7 @@
 void loadDirEntries(dirEntry* DEArray, int location){
     char* DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
     LBAread(DEBuffer, DIRECTORY_BLOCKSIZE, location);
-    memcpy(&DEArray, DEBuffer, MAX_DIRENT_SIZE*sizeof(dirEntry));
+    memcpy(DEArray, DEBuffer, MAX_DIRENT_SIZE*sizeof(dirEntry));
 }
 
 void initGlobalVar(){
@@ -22,8 +22,8 @@ void initGlobalVar(){
 
     cwdEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
     char* DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
-    LBAread(DEBuffer, DIRECTORY_BLOCKSIZE, 1);
-    memcpy(&cwdEntries, DEBuffer, MAX_DIRENT_SIZE*sizeof(dirEntry));
+    LBAread(DEBuffer, DIRECTORY_BLOCKSIZE, vcb.RootDir);
+    memcpy(cwdEntries, DEBuffer, MAX_DIRENT_SIZE*sizeof(dirEntry));
     
 }
 
@@ -102,7 +102,6 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
     
     char *delim = "/";
     char tempPath[strlen(cwdPath)+1];
-    printf("HELLO\n");
     strcpy(tempPath, cwdPath);
     
     dirEntry* tempDirEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
@@ -111,7 +110,7 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
 
     dirEntry* tempDE= malloc(sizeof(tempDE));
     tempDE = NULL;
-
+    
     
 
     //if its absolute, the first character is a slash.
@@ -122,10 +121,12 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
         tempDirEntries = cwdEntries;
     }else{
         //Grab the root directory entries
-        loadDirEntries(tempDirEntries, 6);
+        
+        loadDirEntries(tempDirEntries, vcb.RootDir);   
     }
     
-    
+    char tempPathArr[strlen(tempPath) + 1];
+    strcpy(tempPathArr, tempPath);
     //tokenize path with / as delimeter.
     char *token = strtok(tempPath, delim);
     char *pathTokens[64];
@@ -144,6 +145,7 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
     int exists = 0;
     int tokenCounter = 0;
 
+    printf("HELLO22\n");
     while(pathTokens[tokenCounter] != NULL){
         //check if dir is free and the name matches the element within the path.
         //if both are true, initialize the entryIndex, and make exists = 1.
