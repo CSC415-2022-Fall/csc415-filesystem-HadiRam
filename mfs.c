@@ -101,8 +101,8 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
 {
     
     char *delim = "/";
-    char tempPath[strlen(cwdPath)+1];
-    strcpy(tempPath, cwdPath);
+    char tempPath[strlen(pathname)+1];
+    strcpy(tempPath, pathname);
     
     dirEntry* tempDirEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
     char * DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
@@ -117,11 +117,11 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
     //Check if path is relative and make it absolute
     if (pathname[0] != '/')
     {
+        strcpy(tempPath, cwdPath);
         strncat(tempPath, pathname, strlen(pathname));
         tempDirEntries = cwdEntries;
     }else{
-        //Grab the root directory entries
-        
+        //Grab the root directory entries   
         loadDirEntries(tempDirEntries, vcb.RootDir);   
     }
     
@@ -144,17 +144,21 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
     //Check if path exists
     int exists = 0;
     int tokenCounter = 0;
-
-    printf("HELLO22\n");
+    for(int i = 0; i < tokenIndex; i++){
+        printf("Path:%s\n", pathTokens[i]);
+    }
+   
     while(pathTokens[tokenCounter] != NULL){
         //check if dir is free and the name matches the element within the path.
         //if both are true, initialize the entryIndex, and make exists = 1.
         for(int i = 0; i < 51; i++){
+            
             if(tempDirEntries[i].dirType != -1
              && strcmp(tempDirEntries[i].name, pathTokens[tokenCounter]) == 0){
                 exists = 1;
                 *entryIndex = i;
                 i = 51;
+                 
             }
 
         }
@@ -165,7 +169,7 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
                 *entryIndex = -2;
                 break;
             }else{
-                printf("The path exists");
+                //Path does exist but element does not exist
                 *entryIndex = -1;
                 break;
             }
@@ -260,6 +264,10 @@ int fs_setcwd(char *pathname)
 {
     //check if the path exists
     int index;
+
+    if(strcmp(pathname, "./") == 0){
+        return 0;
+    }
     
     dirEntry* cwdDE = parsePath(pathname, &index);
     
@@ -272,7 +280,8 @@ int fs_setcwd(char *pathname)
     loadDirEntries(cwdEntries, cwdDE->location);
 
     //setting cwdPath
-    strcpy(cwdPath,pathname);
+    char * temp = getParentDirectory(cwdPath);
+    //strcpy(cwdPath,);
     
     //success
     return 0;
