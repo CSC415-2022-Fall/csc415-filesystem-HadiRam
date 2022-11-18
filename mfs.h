@@ -66,7 +66,14 @@ typedef struct
 
 	} fdDir;
 
-
+//This is a private structure used as a return value of the private function parsePath
+typedef struct
+	{
+		dirEntry* DEPointer;
+		int value;
+		char * path[256];
+		
+	} pathInfo;
 
 
 // Key directory functions
