@@ -71,8 +71,8 @@ typedef struct
 	{
 		dirEntry* DEPointer;
 		int value;
-		char * path[256];
-		
+		char path[256];
+
 	} pathInfo;
 
 

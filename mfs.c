@@ -97,9 +97,9 @@ char * getLastPathElement(const char *pathname){
 //returns error if invalid path (-2)
 //returns -1 if path is valid but the
 //returns index of n in dir(n-1)
-dirEntry* parsePath(const char *pathname, int* entryIndex)
+pathInfo* parsePath(const char *pathname)
 {
-    
+    int entryIndex = 0;
     char *delim = "/";
     char tempPath[strlen(pathname)+1];
     strcpy(tempPath, pathname);
@@ -110,8 +110,6 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
 
     dirEntry* tempDE= malloc(sizeof(tempDE));
     tempDE = NULL;
-    
-    
 
     //if its absolute, the first character is a slash.
     //Check if path is relative and make it absolute
@@ -140,13 +138,15 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
     }
 
     pathTokens[tokenIndex] = NULL;
-
+    
     //Check if path exists
+    
     int exists = 0;
     int tokenCounter = 0;
     for(int i = 0; i < tokenIndex; i++){
         printf("Path:%s\n", pathTokens[i]);
     }
+   printf("ParsePath completed");
    
     while(pathTokens[tokenCounter] != NULL){
         //check if dir is free and the name matches the element within the path.
@@ -156,7 +156,7 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
             if(tempDirEntries[i].dirType != -1
              && strcmp(tempDirEntries[i].name, pathTokens[tokenCounter]) == 0){
                 exists = 1;
-                *entryIndex = i;
+                entryIndex = i;
                 i = 51;
                  
             }
@@ -166,55 +166,160 @@ dirEntry* parsePath(const char *pathname, int* entryIndex)
         if(exists == 0){
             //Not the last element
             if(tokenCounter != tokenIndex - 1){
-                *entryIndex = -2;
+                entryIndex = -2;
                 break;
             }else{
                 //Path does exist but element does not exist
-                *entryIndex = -1;
+                entryIndex = -1;
                 break;
             }
         }else if(exists == 1){
             if(tokenCounter != tokenIndex - 1){
                 //Load the next directory DE
-                loadDirEntries(tempDirEntries, tempDirEntries[*entryIndex].location);
+                loadDirEntries(tempDirEntries, tempDirEntries[entryIndex].location);
                 exists = 0;
                 tokenCounter++;
             }else{
                 //Found the file/directory and return the DE index of Dir[n-1]
-                tempDE = &tempDirEntries[*entryIndex];
+                tempDE = &tempDirEntries[entryIndex];
                 break;
             }
         }
 
     }
-
+     
     free(tempDirEntries);
     free(DEBuffer);
 
-    
+    pathInfo* result = malloc(sizeof(pathInfo));
 
-    return tempDE;
+    result->DEPointer = tempDE;
+
+    result->value = entryIndex;
+    strcpy(result->path,pathname);
+
+   
+
+    return result;
 
 }
+// dirEntry* parsePath(const char *pathname, int* entryIndex)
+// {
+    
+//     char *delim = "/";
+//     char tempPath[strlen(pathname)+1];
+//     strcpy(tempPath, pathname);
+    
+//     dirEntry* tempDirEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+//     char * DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
+    
+
+//     dirEntry* tempDE= malloc(sizeof(tempDE));
+//     tempDE = NULL;
+    
+    
+
+//     //if its absolute, the first character is a slash.
+//     //Check if path is relative and make it absolute
+//     if (pathname[0] != '/')
+//     {
+//         strcpy(tempPath, cwdPath);
+//         strncat(tempPath, pathname, strlen(pathname));
+//         tempDirEntries = cwdEntries;
+//     }else{
+//         //Grab the root directory entries   
+//         loadDirEntries(tempDirEntries, vcb.RootDir);   
+//     }
+    
+//     char tempPathArr[strlen(tempPath) + 1];
+//     strcpy(tempPathArr, tempPath);
+//     //tokenize path with / as delimeter.
+//     char *token = strtok(tempPath, delim);
+//     char *pathTokens[64];
+
+//     int tokenIndex = 0;
+//     while (token != NULL)
+//     {
+//         pathTokens[tokenIndex] = token;
+//         token = strtok(NULL, delim);
+//         tokenIndex++;
+//     }
+
+//     pathTokens[tokenIndex] = NULL;
+
+//     //Check if path exists
+//     int exists = 0;
+//     int tokenCounter = 0;
+//     for(int i = 0; i < tokenIndex; i++){
+//         printf("Path:%s\n", pathTokens[i]);
+//     }
+   
+//     while(pathTokens[tokenCounter] != NULL){
+//         //check if dir is free and the name matches the element within the path.
+//         //if both are true, initialize the entryIndex, and make exists = 1.
+//         for(int i = 0; i < 51; i++){
+            
+//             if(tempDirEntries[i].dirType != -1
+//              && strcmp(tempDirEntries[i].name, pathTokens[tokenCounter]) == 0){
+//                 exists = 1;
+//                 *entryIndex = i;
+//                 i = 51;
+                 
+//             }
+
+//         }
+
+//         if(exists == 0){
+//             //Not the last element
+//             if(tokenCounter != tokenIndex - 1){
+//                 *entryIndex = -2;
+//                 break;
+//             }else{
+//                 //Path does exist but element does not exist
+//                 *entryIndex = -1;
+//                 break;
+//             }
+//         }else if(exists == 1){
+//             if(tokenCounter != tokenIndex - 1){
+//                 //Load the next directory DE
+//                 loadDirEntries(tempDirEntries, tempDirEntries[*entryIndex].location);
+//                 exists = 0;
+//                 tokenCounter++;
+//             }else{
+//                 //Found the file/directory and return the DE index of Dir[n-1]
+//                 tempDE = &tempDirEntries[*entryIndex];
+//                 break;
+//             }
+//         }
+
+//     }
+
+//     free(tempDirEntries);
+//     free(DEBuffer);
+
+    
+
+//     return tempDE;
+
+// }
 
 
 fdDir * fs_opendir(const char *pathname){
-    int index;
-    dirEntry* tempDE = parsePath(pathname, &index);
-    if(index >= 0){
-        if(tempDE->dirType != 1){
+    pathInfo* pi = parsePath(pathname);
+    if(pi->value >= 0){
+        if(pi->DEPointer->dirType != 1){
             printf("Not a directory\n");
             return NULL;
         }
         fdDir* fd = malloc(sizeof(fdDir));
 
         fd->dirPointer = malloc(51*sizeof(dirEntry));
-        loadDirEntries(fd->dirPointer, tempDE->location);
+        loadDirEntries(fd->dirPointer, pi->DEPointer->location);
 
         fd->d_reclen = sizeof(fdDir);
-        fd->directoryStartLocation = tempDE->location;
+        fd->directoryStartLocation = pi->DEPointer->location;
         fd->dirEntryPosition = 0;
-        fd->dirSize = (tempDE->size)/((int) sizeof(dirEntry));
+        fd->dirSize = (pi->DEPointer->size)/((int) sizeof(dirEntry));
         return fd;
     }else{
         printf("Invalid path\n");
@@ -262,26 +367,30 @@ char *fs_getcwd(char *pathname, size_t size)
 //setting current working directory
 int fs_setcwd(char *pathname)
 {
+    // cd John
+    //cwd a/b/John
     //check if the path exists
-    int index;
 
     if(strcmp(pathname, "./") == 0){
+
         return 0;
     }
     
-    dirEntry* cwdDE = parsePath(pathname, &index);
+    pathInfo* pi = parsePath(pathname);
     
-    if(index >= 0){ 
+    if(pi->value >= 0){ 
 
     //set both global variables
 
     //setting cwdEntries
     //lba read into buffer, dirEntry.location.
-    loadDirEntries(cwdEntries, cwdDE->location);
+    loadDirEntries(cwdEntries, pi->DEPointer->location);
 
     //setting cwdPath
-    char * temp = getParentDirectory(cwdPath);
-    //strcpy(cwdPath,);
+    //TODO
+    char * temp = malloc(32);
+    temp = getParentDirectory(cwdPath);
+    strcpy(cwdPath,pi->path);
     
     //success
     return 0;
@@ -379,14 +488,13 @@ int fs_mkdir(const char *pathname, mode_t mode)
 int fs_isFile(char * filename)
 {
     //if filename is a path, we have to parse it
-    
-    int index;
+   
 
-    dirEntry* cwdDE = parsePath(filename, &index);
+    pathInfo* pi = parsePath(filename);
 
-    if(index >= 0)
+    if(pi->value >= 0)
     {
-        if(cwdDE->dirType == 0)
+        if(pi->DEPointer->dirType == 0)
         {
             printf("It is a valid file\n");
             return 1;
@@ -432,13 +540,12 @@ int fs_isDir(char * pathname)
 int fs_stat(const char *path, struct fs_stat *buf)
 {
     //first parse the path
-    int index;
-    dirEntry * tempDir;
-    tempDir = parsePath(path, &index);
+     
+    pathInfo* pi = parsePath(path);
     
     //path is valid
-    if (index >=0){
-        loadDirEntries(cwdEntries,tempDir->location);
+    if (pi->value >= 0){
+        loadDirEntries(cwdEntries,pi->DEPointer->location);
         buf->st_accesstime = cwdEntries->lastModified;
         buf->st_size = cwdEntries->size;
         buf->st_createtime = cwdEntries->created;
@@ -454,11 +561,10 @@ int fs_stat(const char *path, struct fs_stat *buf)
 
 dirEntry * GetFileInfo (char * fname)
 {
-    int index;
-    dirEntry *tempDir = parsePath(fname, &index);
+    pathInfo* pi = parsePath(fname);
 
-    if(index >=0){
-        return tempDir;
+    if(pi->value >=0){
+        return pi->DEPointer;
     }
 
     return NULL; //error
