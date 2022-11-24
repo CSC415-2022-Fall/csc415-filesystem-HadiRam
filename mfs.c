@@ -27,45 +27,6 @@ void initGlobalVar(){
     
 }
 
-//function that takes a path, and returns the path excluding the last element.
-char * getParentDirectory(const char *pathname){
-    char* path;
-    strcpy(path, pathname);
-    
-    const char *delim = "/";
-    char tempPath[strlen(path)+1];
-
-    strcpy(tempPath, path);
-  
-    char *token = strtok(tempPath, delim);
-    char *pathTokens[64];
-
-    int tokenIndex = 0;
-    while (token != NULL)
-    {
-        pathTokens[tokenIndex] = token;
-        token = strtok(NULL, delim);
-        tokenIndex++;
-    }
-
-    char pathOfParent[64];
-    pathOfParent[0] = '\0';
-    
-    if(path[0] == '/') strcat(pathOfParent, delim);
-
-    for (int i = 0; i < tokenIndex - 1; i++)
-    {
-        
-        strcat(pathOfParent, pathTokens[i]);
-        strcat(pathOfParent, delim);
-    } 
-
-        char * result;
-        strcpy(result, pathOfParent);
-        return result;
-  
-}
-
 //function that gets the last element within a path
 //example: pass in "/hadi/desktop/folder", returns "folder".
 //return NULL if path invalid
@@ -82,6 +43,26 @@ char * getLastPathElement(const char *pathname){
     return str;
 }
 
+//function that takes a path, and returns the path excluding the last element.
+char * getParentDirectory(const char *pathname){
+    char* lastElement = getLastPathElement(pathname);
+    
+    char tempPath[strlen(pathname)+1];
+    strcpy(tempPath, pathname);
+
+    
+    int len = strlen(lastElement);
+    tempPath[strlen(pathname) - len] = '\0';
+   
+    char* path = malloc(strlen(tempPath) + 1);
+    memcpy(path, tempPath, strlen(tempPath) + 1);
+    
+    return path;
+
+}
+
+
+
 
 
 //function to parse a pathname to check for validity.
@@ -90,6 +71,7 @@ char * getLastPathElement(const char *pathname){
 //returns index of n in dir(n-1)
 pathInfo* parsePath(const char *pathname)
 {
+    
     int entryIndex = 0;
     char *delim = "/";
     char tempPath[strlen(pathname)+1];
@@ -97,6 +79,7 @@ pathInfo* parsePath(const char *pathname)
     
     dirEntry* tempDirEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
     char * DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
+
     
 
     dirEntry* tempDE= malloc(sizeof(tempDE));
@@ -114,13 +97,17 @@ pathInfo* parsePath(const char *pathname)
         loadDirEntries(tempDirEntries, vcb.RootDir);   
     }
     
+    
+    
     char tempPathArr[strlen(tempPath) + 1];
     strcpy(tempPathArr, tempPath);
     //tokenize path with / as delimeter.
     char *token = strtok(tempPath, delim);
     char *pathTokens[64];
+    pathTokens[0] = NULL;
 
     int tokenIndex = 0;
+    
     while (token != NULL)
     {
         pathTokens[tokenIndex] = token;
@@ -128,15 +115,22 @@ pathInfo* parsePath(const char *pathname)
         tokenIndex++;
     }
 
+    //Check if the path is just "/"
+    if(tokenIndex == 0 && pathname[0] == '/'){
+        char* temp = ".";
+        pathTokens[0] = temp;
+        tokenIndex++;
+    }
     pathTokens[tokenIndex] = NULL;
+    
     
     //Check if path exists
     
     int exists = 0;
     int tokenCounter = 0;
-    for(int i = 0; i < tokenIndex; i++){
-        printf("Path:%s\n", pathTokens[i]);
-    }
+    // for(int i = 0; i < tokenIndex; i++){
+    //     printf("Path:%s\n", pathTokens[i]);
+    // }
     
    
     while(pathTokens[tokenCounter] != NULL){
@@ -156,6 +150,7 @@ pathInfo* parsePath(const char *pathname)
 
         if(exists == 0){
             //Not the last element
+
             if(tokenCounter != tokenIndex - 1){
                 entryIndex = -2;
                 break;
@@ -184,14 +179,12 @@ pathInfo* parsePath(const char *pathname)
     free(tempDirEntries);
     free(DEBuffer);
     
-
     pathInfo* result = malloc(sizeof(pathInfo));
 
     result->DEPointer = tempDE;
 
     result->value = entryIndex;
-    strcpy(result->path,pathname);
-
+    strcpy(result->path, tempPath);
 
     return result;
 
@@ -300,10 +293,14 @@ int fs_setcwd(char *pathname)
 //returns -1 if there was an error and directory was not created.
 int fs_mkdir(const char *pathname, mode_t mode)
 {
-
+    pathInfo* pi = parsePath(pathname);
     // Get the path excluding the last directory/file.
+    if(pi->value != -1){
+        return -1;
+    }
+    
     char *parentPath = getParentDirectory(pathname);
-
+    //printf("%s\n", parentPath);
     // Get the last element in the path
     char *lastElementOfPath = getLastPathElement(pathname);
 
@@ -313,6 +310,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
         printf("Error, failed to set parent path as current working directory.");
         return -1;
     }
+    printf("%s\n", cwdPath);
 
     // cwdEntries is set using the parent path, now these entries will be
     // looped through to find an entry ina  free state.
