@@ -4,19 +4,14 @@
 
 
 int main(){
-    printf("Hello world");
-char tempPath[] = "/Home/Desktop";
-char * delim = "/";
-char *token = strtok(tempPath, delim);
-    char *pathTokens[64];
+char tempPath[] = "../";
+char *str;
+str = strrchr(tempPath, '/');
+if (str != NULL) {
+    str++; /* step over the slash */
+    printf("%s\n", str);
+}else{
+    printf("Hello\n");
+}
 
-    int tokenIndex = 0;
-    while (token != NULL)
-    {
-        pathTokens[tokenIndex] = token;
-        token = strtok(NULL, delim);
-        tokenIndex++;
-    }
-
-    pathTokens[tokenIndex] = NULL;
 }
