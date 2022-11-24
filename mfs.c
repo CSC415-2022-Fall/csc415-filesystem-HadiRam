@@ -216,12 +216,15 @@ fdDir * fs_opendir(const char *pathname){
 }
 
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
-    struct fs_diriteminfo* ii;
-    ii = NULL;
+    struct fs_diriteminfo* ii = malloc(sizeof(struct fs_diriteminfo));
+    int exist = 0;
 
     for(int i = dirp->dirEntryPosition; i < dirp->dirSize; i++){
         if(dirp->dirPointer[i].dirType != -1){
+            //DEBUG
+            printf("%s\n", dirp->dirPointer[i].name);
             strcpy(ii->d_name, dirp->dirPointer[i].name);
+            
             ii->d_reclen = (int) sizeof(struct fs_diriteminfo);
             if(dirp->dirPointer[i].dirType == 1){
                 ii->fileType = '1';
@@ -230,8 +233,12 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
             }
             dirp->dirEntryPosition += 1;
             //EXIT LOOP CONDITION
-            i = dirp->dirSize;
+            i = 69;
+            exist = 1;
         }
+    }
+    if(exist == 0){
+        ii = NULL;
     }
 
     return ii;
@@ -265,8 +272,6 @@ int fs_setcwd(char *pathname)
     }
     
     pathInfo* pi = parsePath(pathname);
-    
-    printf("%d, %s\n", pi->value, pi->path);
 
     if(pi->value >= 0){ 
 
@@ -311,6 +316,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
         return -1;
     }
     printf("%s\n", cwdPath);
+    //TODO
 
     // cwdEntries is set using the parent path, now these entries will be
     // looped through to find an entry ina  free state.
