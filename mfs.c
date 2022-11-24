@@ -10,20 +10,22 @@
 
 
 //Helper Functions
+void updateBitMapOnDisk(){
+	LBAwrite(vcb.freeSpaceBitMap, 5, 1);
+}
+
 void loadDirEntries(dirEntry* DEArray, int location){
-    char* DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
-    LBAread(DEBuffer, DIRECTORY_BLOCKSIZE, location);
-    memcpy(DEArray, DEBuffer, MAX_DIRENT_SIZE*sizeof(dirEntry));
+    LBAread(DEArray, DIRECTORY_BLOCKSIZE, location);
 }
 
 void initGlobalVar(){
     cwdPath = malloc(256);
     strcpy(cwdPath, "/");
 
-    cwdEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+    cwdEntries = malloc(MAX_DIRENT_SIZE*DE_STRUCT_SIZE);
     char* DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
     LBAread(DEBuffer, DIRECTORY_BLOCKSIZE, vcb.RootDir);
-    memcpy(cwdEntries, DEBuffer, MAX_DIRENT_SIZE*sizeof(dirEntry));
+    memcpy(cwdEntries, DEBuffer, MAX_DIRENT_SIZE*DE_STRUCT_SIZE);
     
 }
 
@@ -45,6 +47,12 @@ char * getLastPathElement(const char *pathname){
 
 //function that takes a path, and returns the path excluding the last element.
 char * getParentDirectory(const char *pathname){
+    if(pathname[0] == '/' && strlen(pathname) <= 1){
+        char* path;
+        strcpy(path, pathname);
+        return path;
+    }
+
     char* lastElement = getLastPathElement(pathname);
     
     char tempPath[strlen(pathname)+1];
@@ -52,7 +60,14 @@ char * getParentDirectory(const char *pathname){
 
     
     int len = strlen(lastElement);
-    tempPath[strlen(pathname) - len] = '\0';
+    //In the case the parent is the root "/home" => "/"
+    if(strlen(pathname) == len+1){
+        tempPath[strlen(pathname) - len] = '\0';
+    }else{
+        //regular case where we would want to remove last slash
+        //Example: "/home/foo" => "/home"
+        tempPath[strlen(pathname) - len - 1] = '\0';
+    }
    
     char* path = malloc(strlen(tempPath) + 1);
     memcpy(path, tempPath, strlen(tempPath) + 1);
@@ -71,7 +86,7 @@ char * getParentDirectory(const char *pathname){
 //returns index of n in dir(n-1)
 pathInfo* parsePath(const char *pathname)
 {
-    
+    pathInfo* result = malloc(sizeof(pathInfo));
     int entryIndex = 0;
     char *delim = "/";
     char tempPath[strlen(pathname)+1];
@@ -89,14 +104,22 @@ pathInfo* parsePath(const char *pathname)
     //Check if path is relative and make it absolute
     if (pathname[0] != '/')
     {
-        strcpy(tempPath, cwdPath);
-        strncat(tempPath, pathname, strlen(pathname));
-        tempDirEntries = cwdEntries;
-    }else{
-        //Grab the root directory entries   
-        loadDirEntries(tempDirEntries, vcb.RootDir);   
+        if(pathname[0] == '.' && pathname[1] == '.'){
+            //If its ".."
+            char* temp = getParentDirectory(cwdPath);
+            strcpy(tempPath, temp);
+        }else{
+            //Append the relative path to the cwdPath
+            strcpy(tempPath, cwdPath);
+            if(tempPath[strlen(tempPath)-1] != '/'){
+                strcat(tempPath, "/");
+            }
+            strncat(tempPath, pathname, strlen(pathname));  
+        }    
     }
     
+    strcpy(result->path, tempPath);
+    loadDirEntries(tempDirEntries, vcb.RootDir);  
     
     
     char tempPathArr[strlen(tempPath) + 1];
@@ -179,13 +202,13 @@ pathInfo* parsePath(const char *pathname)
     free(tempDirEntries);
     free(DEBuffer);
     
-    pathInfo* result = malloc(sizeof(pathInfo));
+    
 
     result->DEPointer = tempDE;
 
     result->value = entryIndex;
-    strcpy(result->path, tempPath);
-
+    
+    
     return result;
 
 }
@@ -201,13 +224,13 @@ fdDir * fs_opendir(const char *pathname){
         }
         fdDir* fd = malloc(sizeof(fdDir));
 
-        fd->dirPointer = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+        fd->dirPointer = malloc(MAX_DIRENT_SIZE*DE_STRUCT_SIZE);
+        //printf("Location:%d, size:%d\n", pi->DEPointer->location, pi->DEPointer->size);
         loadDirEntries(fd->dirPointer, pi->DEPointer->location);
-
         fd->d_reclen = sizeof(fdDir);
         fd->directoryStartLocation = pi->DEPointer->location;
         fd->dirEntryPosition = 0;
-        fd->dirSize = (pi->DEPointer->size)/((int) sizeof(dirEntry));
+        fd->dirSize = (fd->dirPointer[0].size)/DE_STRUCT_SIZE;
         return fd;
     }else{
         printf("Invalid path\n");
@@ -218,12 +241,12 @@ fdDir * fs_opendir(const char *pathname){
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
     struct fs_diriteminfo* ii = malloc(sizeof(struct fs_diriteminfo));
     int exist = 0;
-    //printf("TEST: %s and %d\n",dirp->dirPointer[0].name,dirp->dirPointer[0].size);
+    //printf("TEST: %d and %d\n",dirp->dirEntryPosition,dirp->dirPointer[0].size);
     for(int i = dirp->dirEntryPosition; i < dirp->dirSize; i++){
         if(dirp->dirPointer[i].dirType != -1){
             strcpy(ii->d_name, dirp->dirPointer[i].name);
             //DEBUG
-            printf("%s and %d\n",dirp->dirPointer[i].name,dirp->dirPointer[i].location);
+            //printf("%s and %d\n",dirp->dirPointer[i].name,dirp->dirPointer[i].location);
             ii->d_reclen = (int) sizeof(struct fs_diriteminfo);
             if(dirp->dirPointer[i].dirType == 1){
                 ii->fileType = '1';
@@ -271,6 +294,7 @@ int fs_setcwd(char *pathname)
     }
     
     pathInfo* pi = parsePath(pathname);
+    
 
     if(pi->value >= 0){ 
 
@@ -279,7 +303,6 @@ int fs_setcwd(char *pathname)
         //setting cwdEntries
         //lba read into buffer, dirEntry.location.
         loadDirEntries(cwdEntries, pi->DEPointer->location);
-        
         //setting cwdPath   
         strcpy(cwdPath,pi->path);
         
@@ -297,17 +320,16 @@ int fs_setcwd(char *pathname)
 //returns -1 if there was an error and directory was not created.
 int fs_mkdir(const char *pathname, mode_t mode)
 {
+    
     pathInfo* pi = parsePath(pathname);
     // Get the path excluding the last directory/file.
     if(pi->value != -1){
         return -1;
     }
+    char *parentPath = getParentDirectory(pi->path);
     
-    char *parentPath = getParentDirectory(pathname);
-    //printf("%s\n", parentPath);
     // Get the last element in the path
-    char *lastElementOfPath = getLastPathElement(pathname);
-
+    char *lastElementOfPath = getLastPathElement(pi->path);
     // Set the parent path to the current working directory.
     if (fs_setcwd(parentPath) == -1)
     {
@@ -331,20 +353,24 @@ int fs_mkdir(const char *pathname, mode_t mode)
             indexOfNewDirEntry = i;
             strcpy(cwdEntries[i].name, lastElementOfPath);
             cwdEntries[i].dirType = 1;
-            cwdEntries[i].size = (int)(sizeof(dirEntry) * 2);
+            cwdEntries[i].size = DE_STRUCT_SIZE*2;
             cwdEntries[i].location =
                 getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, DIRECTORY_BLOCKSIZE);
-                printf("DEBUG1:%d\n", cwdEntries[i].location);
+            updateBitMapOnDisk();
             time(&cwdEntries[i].created);
             time(&cwdEntries[i].lastModified);
-            cwdEntries[0].size += (int)sizeof(dirEntry);
+            cwdEntries[0].size += DE_STRUCT_SIZE;
+            //Update .. if its the root directory
+            if(cwdEntries[0].location == cwdEntries[1].location){
+                cwdEntries[1].size += DE_STRUCT_SIZE;
+            }
             i = 52;
         }
     }
     
-
+    
     // Parse path on passed path, to get the directry entry of the new directroy.
-    dirEntry *dirEntries = malloc(MAX_DIRENT_SIZE * sizeof(dirEntry));
+    dirEntry *dirEntries = malloc(MAX_DIRENT_SIZE * DE_STRUCT_SIZE);
     loadDirEntries(dirEntries, cwdEntries[indexOfNewDirEntry].location);
 
     for (int i = 0; i < numOfDirEntries; i++)
@@ -353,11 +379,12 @@ int fs_mkdir(const char *pathname, mode_t mode)
         dirEntries[i].dirType = -1; // free state
         dirEntries[i].size = 0;
         dirEntries[i].location = -1;
+        dirEntries[i].reclen = DE_STRUCT_SIZE;
     }
 
     // Set up the "." Directory Entry
     strcpy(dirEntries[0].name, ".");
-    dirEntries[0].size = (int)(sizeof(dirEntry) * 2);
+    dirEntries[0].size = DE_STRUCT_SIZE*2;;
     // 1 for Directory type directory Entry
     dirEntries[0].dirType = 1;
     dirEntries[0].location = cwdEntries[indexOfNewDirEntry].location;
@@ -375,11 +402,10 @@ int fs_mkdir(const char *pathname, mode_t mode)
     dirEntries[1].created = cwdEntries[0].created;
     dirEntries[1].lastModified = cwdEntries[0].lastModified;
 
-    printf("DEBUG2:%d\n", dirEntries[0].location);
-    // Writing the cwd and new dir entry to disk
+    // Writing the cwd and new dir entry to disk 
     LBAwrite(dirEntries, DIRECTORY_BLOCKSIZE, dirEntries[0].location);
     LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
-    printf("%d\n", cwdEntries[2].dirType);
+
     // return 0 on successful creation of new directory.
     return 0;
 }

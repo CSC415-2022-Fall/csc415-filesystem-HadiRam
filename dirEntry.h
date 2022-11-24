@@ -5,6 +5,7 @@
 
 #define DIRECTORY_BLOCKSIZE 6
 #define MAX_DIRENT_SIZE 48
+#define DE_STRUCT_SIZE 64
 
 //Directory Entry struct with the size of 64 bytes
 typedef struct dirEntry{
