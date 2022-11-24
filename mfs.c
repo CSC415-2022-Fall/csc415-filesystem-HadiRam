@@ -136,14 +136,14 @@ pathInfo* parsePath(const char *pathname)
     while(pathTokens[tokenCounter] != NULL){
         //check if dir is free and the name matches the element within the path.
         //if both are true, initialize the entryIndex, and make exists = 1.
-        for(int i = 0; i < 51; i++){
+        for(int i = 0; i < MAX_DIRENT_SIZE; i++){
             
             if(tempDirEntries[i].dirType != -1
              && strcmp(tempDirEntries[i].name, pathTokens[tokenCounter]) == 0){
                 exists = 1;
                 entryIndex = i;
                 
-                i = 51;
+                i = MAX_DIRENT_SIZE;
             }
 
         }
@@ -201,7 +201,7 @@ fdDir * fs_opendir(const char *pathname){
         }
         fdDir* fd = malloc(sizeof(fdDir));
 
-        fd->dirPointer = malloc(51*sizeof(dirEntry));
+        fd->dirPointer = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
         loadDirEntries(fd->dirPointer, pi->DEPointer->location);
 
         fd->d_reclen = sizeof(fdDir);
@@ -218,13 +218,12 @@ fdDir * fs_opendir(const char *pathname){
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
     struct fs_diriteminfo* ii = malloc(sizeof(struct fs_diriteminfo));
     int exist = 0;
-
+    //printf("TEST: %s and %d\n",dirp->dirPointer[0].name,dirp->dirPointer[0].size);
     for(int i = dirp->dirEntryPosition; i < dirp->dirSize; i++){
         if(dirp->dirPointer[i].dirType != -1){
-            //DEBUG
-            printf("%s\n", dirp->dirPointer[i].name);
             strcpy(ii->d_name, dirp->dirPointer[i].name);
-            
+            //DEBUG
+            printf("%s and %d\n",dirp->dirPointer[i].name,dirp->dirPointer[i].location);
             ii->d_reclen = (int) sizeof(struct fs_diriteminfo);
             if(dirp->dirPointer[i].dirType == 1){
                 ii->fileType = '1';
@@ -321,7 +320,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
     // cwdEntries is set using the parent path, now these entries will be
     // looped through to find an entry ina  free state.
 
-    int numOfDirEntries = 51;
+    int numOfDirEntries = MAX_DIRENT_SIZE;
     int indexOfNewDirEntry;
 
     for (int i = 0; i < numOfDirEntries; i++)
@@ -334,16 +333,18 @@ int fs_mkdir(const char *pathname, mode_t mode)
             cwdEntries[i].dirType = 1;
             cwdEntries[i].size = (int)(sizeof(dirEntry) * 2);
             cwdEntries[i].location =
-                getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
+                getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, DIRECTORY_BLOCKSIZE);
+                printf("DEBUG1:%d\n", cwdEntries[i].location);
             time(&cwdEntries[i].created);
             time(&cwdEntries[i].lastModified);
             cwdEntries[0].size += (int)sizeof(dirEntry);
             i = 52;
         }
     }
+    
 
     // Parse path on passed path, to get the directry entry of the new directroy.
-    dirEntry *dirEntries = malloc(51 * sizeof(dirEntry));
+    dirEntry *dirEntries = malloc(MAX_DIRENT_SIZE * sizeof(dirEntry));
     loadDirEntries(dirEntries, cwdEntries[indexOfNewDirEntry].location);
 
     for (int i = 0; i < numOfDirEntries; i++)
@@ -374,10 +375,11 @@ int fs_mkdir(const char *pathname, mode_t mode)
     dirEntries[1].created = cwdEntries[0].created;
     dirEntries[1].lastModified = cwdEntries[0].lastModified;
 
+    printf("DEBUG2:%d\n", dirEntries[0].location);
     // Writing the cwd and new dir entry to disk
-    LBAwrite(dirEntries, 6, dirEntries[0].location);
-    LBAwrite(cwdEntries, 6, cwdEntries[indexOfNewDirEntry].location);
-
+    LBAwrite(dirEntries, DIRECTORY_BLOCKSIZE, dirEntries[0].location);
+    LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
+    printf("%d\n", cwdEntries[2].dirType);
     // return 0 on successful creation of new directory.
     return 0;
 }

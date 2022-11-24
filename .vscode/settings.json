@@ -5,5 +5,8 @@
             "binaryPath": "/home/student/Documents/csc415-filesystem-HadiRam/fsshell",
             "binaryArgs": []
         }
-    ]
+    ],
+    "files.associations": {
+        "fslow.h": "c"
+    }
 }

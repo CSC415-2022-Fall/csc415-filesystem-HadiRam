@@ -29,7 +29,7 @@
 #include "dirEntry.h"
 
 
-#define MAGIC_NUMBER 0xEFB112C2EFB112C2
+#define MAGIC_NUMBER 0xEFB112C2EFB112C3
 
 //Redeclaring the vcb global variable
 VCB vcb;
@@ -82,10 +82,11 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		vcb.freeSpace = 1;
 		
 		//Initialize RootDirectory
-		//Our Directory Entry is 60 bytes long
-		int numOfDirEntries = 51; //6 blocks 
+		//Our Directory Entry is 64 bytes long
+		int numOfDirEntries = MAX_DIRENT_SIZE; //6 blocks 
 		int sizeOfDirectory = 6; 
 		dirEntry* rootDir = malloc(numOfDirEntries*sizeof(dirEntry));
+		printf("%d", sizeof(dirEntry));
 		//Setting the directory entries to their free state
 		for(int i = 0; i < numOfDirEntries; i++){
 			rootDir[i].name[0] = '\0';
