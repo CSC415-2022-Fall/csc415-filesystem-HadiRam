@@ -1,6 +1,8 @@
 #include "bitMap.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+#include "fsLow.h"
 
 int bitCounter(unsigned char myByte){
     int x = 0;
@@ -69,30 +71,12 @@ int checkABit(unsigned char myByte, int offset){
 }
 
 
-// int checkForConsecFreeSpace(unsigned char myByte, int count){
-//     int temp = 0;
-//     if(freeSpaceCounter(myByte) >= count){
-//         for(int i = 0; i < 8; i++){
-//             if(checkABit(myByte, i) == 0){
-//                 temp++;
-//                 if(temp == count){
-//                     return 1;
-//                 }
-//             }else{
-//                 temp = 0;
-//             }
-//         }
-//     }
-//     return 0;
-// }
-
-//1111 1100 0000 0000 1111 1111 0000 0000 0000 0000
-
 int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
     int firstFreeBlock;
     int firstFreeByte;
     int minFreeBytesNeeded = (numOfBlocks + 7)/8;
     int freeConsecBytes = 0;
+
     for(int i =0; i < bitMapSize; i++){
         if(bitMap[i] == 0x00){
             if(freeConsecBytes == 0){
@@ -120,6 +104,11 @@ int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
         }
     }
 
+    //Fail to find free consec blocks
+    if(freeConsecBytes == 0){
+        return -1;
+    }
+
     for(int i = 0; i < numOfBlocks; i++){
         setABit(bitMap, firstFreeBlock + i);
     }
@@ -133,6 +122,10 @@ int releaseFreeSpace(unsigned char* bitMap, int location, int size){
         clearABit(bitMap, i);
     }
     return 0;
+}
+
+void updateBitMap(unsigned char* bitMap){
+	LBAwrite(bitMap, BITMAP_SIZE, BITMAP_LOCATION);
 }
 
 // int main(){

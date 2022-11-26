@@ -10,9 +10,7 @@
 
 
 //Helper Functions
-void updateBitMapOnDisk(){
-	LBAwrite(vcb.freeSpaceBitMap, 5, 1);
-}
+
 
 void loadDirEntries(dirEntry* DEArray, int location){
     LBAread(DEArray, DIRECTORY_BLOCKSIZE, location);
@@ -147,8 +145,6 @@ pathInfo* parsePath(const char *pathname)
             strncat(tempPath, pathname, strlen(pathname));  
         }    
     }
-   
-    printf("My path:%s\n", tempPath);
     
     strcpy(result->path, tempPath);
     loadDirEntries(tempDirEntries, vcb.RootDir);  
@@ -242,7 +238,7 @@ pathInfo* parsePath(const char *pathname)
 
     result->value = entryIndex;
     
-    
+    //printf("Mypath: %s\n", result->path);
     return result;
 
 }
@@ -372,8 +368,6 @@ int fs_mkdir(const char *pathname, mode_t mode)
         printf("Error, failed to set parent path as current working directory.");
         return -1;
     }
-    printf("%s\n", cwdPath);
-    //TODO
 
     // cwdEntries is set using the parent path, now these entries will be
     // looped through to find an entry ina  free state.
@@ -392,7 +386,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
             cwdEntries[i].size = DE_STRUCT_SIZE*2;
             cwdEntries[i].location =
                 getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, DIRECTORY_BLOCKSIZE);
-            updateBitMapOnDisk();
+            updateBitMap(vcb.freeSpaceBitMap);
             time(&cwdEntries[i].created);
             time(&cwdEntries[i].lastModified);
             cwdEntries[0].size += DE_STRUCT_SIZE;

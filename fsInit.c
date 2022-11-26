@@ -48,9 +48,6 @@ void initBitMap(char* bitMapPointer, u_int64_t blockSize){
     LBAwrite(bitMapPointer, 5, 1);
 }
 
-void updateBitMap(){
-	LBAwrite(vcb.freeSpaceBitMap, 5, 1);
-}
 
 int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
@@ -122,7 +119,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		vcb.RootDir = freeBlockIndex;
 
 		//Update bitmap on disk
-		updateBitMap();
+		updateBitMap(vcb.freeSpaceBitMap);
 		//Write VCB back onto disk
 		memcpy(vcbBlock, &vcb, sizeof(VCB));
 		LBAwrite(vcbBlock, 1, 0);

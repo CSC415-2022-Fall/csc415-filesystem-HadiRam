@@ -8,6 +8,7 @@
     ],
     "files.associations": {
         "fslow.h": "c",
-        "mfs.h": "c"
+        "mfs.h": "c",
+        "fcntl.h": "c"
     }
 }

@@ -19,14 +19,19 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <time.h>
+
+
 #include "b_io.h"
 #include "bitMap.h"
 #include "mfs.h"
+#include "vcb.h"
+#include "fsLow.h"
+#include "extent.h"
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
-
-#define NUM_DIRECTORIES 51
+#define INIT_FILE_SIZE 50
 
 typedef struct b_fcb
 	{
@@ -34,8 +39,10 @@ typedef struct b_fcb
 	char * buf;		//holds the open file buffer
 	int index;		//holds the current position in the buffer
 	int buflen;		//holds how many valid bytes are in the buffer
-
-	dirEntry* fi; //holds the low level file info 
+	//ADDED
+	int flag; 		//holds the permission of the file
+	dirEntry* DE; //holds the low level file info 
+	extent* extentTable; //holds the extent table of the file
 
 	} b_fcb;
 	
@@ -90,49 +97,85 @@ b_io_fd b_open (char * filename, int flags)
 		return -1;
 	}
 	
-
-	dirEntry * tempDir;
-
-	int index;
-
-	tempDir = parsePath(filename,index);
-
-	if(GetFileInfo(filename) == NULL)
-	{
+	pathInfo* pi = parsePath(filename);
+	if(pi->value == -2){
 		return -1;
 	}
-	// O_RDONLY, O_WRONLY, or O_RDWR
-	if(index >= 0 & flags == O_RDONLY | O_WRONLY | O_RDWR)
-	{
 
-		//malloc the buffer
-		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
+	//fcbArray[returnFd].DE = pi->DEPointer;
+
+	if(pi->value == -1 && flags | O_CREAT){
+		int fileFreeSpace = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, INIT_FILE_SIZE);
+
+		if(fileFreeSpace == -1){
+			printf("No more free space\n");
+			return -1;
+		}
+		char* parentPath = getParentDirectory(pi->path);
+		pathInfo* parentPi = parsePath(parentPath);
+
+		dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+		LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, parentPi->DEPointer->location);
+
+		//Find free directory Entry inside parent directory
+		int index = -1;
+		for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+			if(tempDEntries[i].dirType == -1){
+				index = i;
+				//Exit loop
+				i = MAX_DIRENT_SIZE;
+			}
+		}
+
+		if(index == -1){
+			printf("Directory is full\n");
+			return -1;
+		}
+		//Initialize File Directory Entry inside Parent Directory
+		strcpy(tempDEntries[index].name, filename);
+		tempDEntries[index].dirType = 0;
+		tempDEntries[index].location = fileFreeSpace;
+		tempDEntries[index].size = 0;
+		time(&tempDEntries[index].created);
+		time(&tempDEntries[index].lastModified);
+
+		tempDEntries[index].extentLocation = 
+			getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, EXTENT_BLOCK_SIZE);
+
+		//Set up DEPointer in the FCB Struct
+		fcbArray[returnFd].DE = malloc(sizeof(dirEntry));
+		strcpy(fcbArray[returnFd].DE->name, tempDEntries[index].name);
+		fcbArray[returnFd].DE->dirType = tempDEntries[index].dirType;
+		fcbArray[returnFd].DE->location = tempDEntries[index].location ;
+		fcbArray[returnFd].DE->size = tempDEntries[index].size;
+		fcbArray[returnFd].DE->created = tempDEntries[index].created;
+		fcbArray[returnFd].DE->lastModified = tempDEntries[index].lastModified;
+		fcbArray[returnFd].DE->extentLocation = tempDEntries[index].extentLocation;
+
+		initExtentTable(tempDEntries[index].extentLocation);
+		extent* extentTable = getExtentTable(tempDEntries[index].extentLocation);
+		//Adding the first extent
+		addToExtentTable(extentTable, tempDEntries[index].location, INIT_FILE_SIZE);
 
 
-	} else if(index == -1 & flags == O_CREAT)//If the specified file does not exist, it may optionally (if O_CREAT
-       											//is specified in flags) be created by open().
-	{
-			// //
-			// char* fname;
-			// fname = getLastPathElement(filename);
-			// for (int i = 0; i < NUM_DIRECTORIES; i++)
-			// {
-			// 	// if the dir is free, begin creating the new directory.
-			// 	if (tempDir[i].dirType == -1)
-			// 	{
-			// 		// indexOfNewDirEntry = i;
-			// 		strcpy(tempDir[i].name, fname);
-			// 		tempDir[i].dirType = 0;
-			// 		//tempDir[i].size = 0;
-			// 		tempDir[i].location =
-			// 			getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
-			// 		time(&tempDir[i].created);
-			// 		time(&tempDir[i].lastModified);
-			// 		tempDir[0].size += (int)sizeof(dirEntry);
-			// 		i = 52;
-			// 	}
-			// }
+		//Write to disk
+		LBAwrite(extentTable, EXTENT_BLOCK_SIZE,tempDEntries[index].extentLocation);
+		updateBitMap(vcb.freeSpaceBitMap);
+		LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, tempDEntries[0].location);
+
+		//Set up FCB
+		fcbArray[returnFd].buf = malloc(sizeof(char)*INIT_FILE_SIZE);
+		fcbArray[returnFd].index = 0;
+		fcbArray[returnFd].buflen = 0;
+		fcbArray[returnFd].flag = flags;
+		fcbArray[returnFd].extentTable = extentTable;
+
+		free(tempDEntries);
+		tempDEntries = NULL;
+		 
 	}
+
+	
 	
 	return (returnFd);						// all set
 	}

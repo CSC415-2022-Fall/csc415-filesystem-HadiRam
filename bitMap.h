@@ -1,6 +1,8 @@
 #ifndef BITMAP_H
 #define BITMAP_H
 
+#define BITMAP_SIZE 5
+#define BITMAP_LOCATION 1
 // int bitCounter(unsigned char myByte);
 // unsigned char mask(int offset);
 // int freeSpaceCounter(unsigned char myByte);
@@ -13,5 +15,6 @@
 
 int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks);
 int releaseFreeSpace(unsigned char* bitMap, int location, int size);
+void updateBitMap(unsigned char* bitMap);
 
 #endif
