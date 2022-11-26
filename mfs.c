@@ -48,8 +48,9 @@ char * getLastPathElement(const char *pathname){
 //function that takes a path, and returns the path excluding the last element.
 char * getParentDirectory(const char *pathname){
     if(pathname[0] == '/' && strlen(pathname) <= 1){
-        char* path;
+        char* path = malloc(sizeof(char)*2);
         strcpy(path, pathname);
+
         return path;
     }
 
@@ -89,25 +90,54 @@ pathInfo* parsePath(const char *pathname)
     pathInfo* result = malloc(sizeof(pathInfo));
     int entryIndex = 0;
     char *delim = "/";
-    char tempPath[strlen(pathname)+1];
+    char tempPath[256];
+    tempPath[0] = '\0';
     strcpy(tempPath, pathname);
     
     dirEntry* tempDirEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
     char * DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
 
-    
 
     dirEntry* tempDE= malloc(sizeof(tempDE));
     tempDE = NULL;
 
+    
     //if its absolute, the first character is a slash.
     //Check if path is relative and make it absolute
     if (pathname[0] != '/')
     {
-        if(pathname[0] == '.' && pathname[1] == '.'){
-            //If its ".."
-            char* temp = getParentDirectory(cwdPath);
-            strcpy(tempPath, temp);
+        if(pathname[0] == '.'){
+            
+            if(pathname[1] == '.'){
+                //If its ".."
+                // a/b/c
+                // cd ../x/c
+                char* parentPath = getParentDirectory(cwdPath);
+                // '/'
+                strcpy(tempPath, parentPath);
+                char* temp = malloc(strlen(pathname) + 1);
+                strcpy(temp, pathname);
+                //Removing the ".."
+                temp++;
+                temp++;
+                //Removing the extra / if the parent is the root "/"
+                if((strlen(tempPath) == 1 && strlen(temp) != 0) || strlen(temp) == 1){
+                    temp++;
+                }
+                strcat(tempPath, temp);
+
+            }else{
+                //if its "."
+                strcpy(tempPath, cwdPath);
+                char* temp = malloc(strlen(pathname) + 1);
+                strcpy(temp, pathname);
+                temp++;
+                if(strlen(tempPath) == 1 && strlen(temp) != 0){
+                    temp++;
+                }
+                strcat(tempPath, temp);
+            }
+
         }else{
             //Append the relative path to the cwdPath
             strcpy(tempPath, cwdPath);
@@ -117,6 +147,8 @@ pathInfo* parsePath(const char *pathname)
             strncat(tempPath, pathname, strlen(pathname));  
         }    
     }
+   
+    printf("My path:%s\n", tempPath);
     
     strcpy(result->path, tempPath);
     loadDirEntries(tempDirEntries, vcb.RootDir);  
@@ -137,12 +169,14 @@ pathInfo* parsePath(const char *pathname)
         token = strtok(NULL, delim);
         tokenIndex++;
     }
-
+    
     //Check if the path is just "/"
-    if(tokenIndex == 0 && pathname[0] == '/'){
+    if(tokenIndex == 0){
+        
         char* temp = ".";
         pathTokens[0] = temp;
         tokenIndex++;
+        
     }
     pathTokens[tokenIndex] = NULL;
     
@@ -288,25 +322,26 @@ int fs_setcwd(char *pathname)
     //cwd a/b/John
     //check if the path exists
 
-    if(strcmp(pathname, "./") == 0){
+    if(strcmp(pathname, "./") == 0 ){
 
         return 0;
     }
     
     pathInfo* pi = parsePath(pathname);
     
-
     if(pi->value >= 0){ 
 
         //set both global variables
 
         //setting cwdEntries
         //lba read into buffer, dirEntry.location.
+        
         loadDirEntries(cwdEntries, pi->DEPointer->location);
+        
         //setting cwdPath   
         strcpy(cwdPath,pi->path);
         
-
+        
         //success
         return 0;
     }
@@ -331,6 +366,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
     // Get the last element in the path
     char *lastElementOfPath = getLastPathElement(pi->path);
     // Set the parent path to the current working directory.
+    
     if (fs_setcwd(parentPath) == -1)
     {
         printf("Error, failed to set parent path as current working directory.");
@@ -379,7 +415,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
         dirEntries[i].dirType = -1; // free state
         dirEntries[i].size = 0;
         dirEntries[i].location = -1;
-        dirEntries[i].reclen = DE_STRUCT_SIZE;
+        dirEntries[i].extentLocation = -1;
     }
 
     // Set up the "." Directory Entry

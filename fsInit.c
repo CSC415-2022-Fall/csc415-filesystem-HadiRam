@@ -29,7 +29,7 @@
 #include "dirEntry.h"
 
 
-#define MAGIC_NUMBER 0xEFB112C2EFB112C2
+#define MAGIC_NUMBER 0xEFB112C2EFB112C1
 
 //Redeclaring the vcb global variable
 VCB vcb;

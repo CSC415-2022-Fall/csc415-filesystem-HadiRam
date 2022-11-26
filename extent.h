@@ -1,13 +1,14 @@
 #ifndef EXTENT_H
 #define EXTENT_H
 
-typedef struct dirEntry{
+#define NUMBER_OF_EXTENT 64
+
+typedef struct extent{
 	int location;
 	int count;
 	
-} dirEntry;
+} extent;
 
-int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks);
-int releaseFreeSpace(unsigned char* bitMap, int location, int size);
+extent* getExtentTable(int extentLocation);
 
 #endif
