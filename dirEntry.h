@@ -16,7 +16,7 @@ typedef struct dirEntry{
 	int size;
 	//Free state is -1 || is a file directory entry 0 || is a directory 1
 	int dirType;
-	int reclen;
+	int extentLocation;
 	
 } dirEntry;
 

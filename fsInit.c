@@ -93,7 +93,7 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 			rootDir[i].dirType = -1; //free state
 			rootDir[i].size = 0;
 			rootDir[i].location = -1;
-			rootDir[i].reclen = DE_STRUCT_SIZE;
+			rootDir[i].extentLocation = -1;
 		}
 		int freeBlockIndex = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, 6);
 		
