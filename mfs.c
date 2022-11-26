@@ -398,7 +398,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
     // 1 for Directory type directory Entry
     dirEntries[1].dirType = cwdEntries[0].dirType;
     dirEntries[1].location = cwdEntries[0].location;
-    // Setting the time created and last modified to the current time
+    // Setting the time createdand last modified to the current time
     dirEntries[1].created = cwdEntries[0].created;
     dirEntries[1].lastModified = cwdEntries[0].lastModified;
 
@@ -422,12 +422,10 @@ int fs_isFile(char * filename)
     if(pi->value >= 0)
     {
         if(pi->DEPointer->dirType == 0)
-        {
-            printf("It is a valid file\n");
+        {           
             return 1;
         }
         else {
-            printf("Not a file\n");
             return 0;
         }
     } else {
@@ -446,12 +444,10 @@ int fs_isDir(char * pathname)
     int index = fs_isFile(pathname);
 
     if (index == 1)
-    {
-        printf("Not a directory. Its a file\n");
+    {       
         return 0;
     }
     else if(index == 0) {
-        printf("Its a directory.\n");
         return 1;
     }
     else {

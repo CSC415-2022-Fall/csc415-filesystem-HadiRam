@@ -69,22 +69,22 @@ int checkABit(unsigned char myByte, int offset){
 }
 
 
-int checkForConsecFreeSpace(unsigned char myByte, int count){
-    int temp = 0;
-    if(freeSpaceCounter(myByte) >= count){
-        for(int i = 0; i < 8; i++){
-            if(checkABit(myByte, i) == 0){
-                temp++;
-                if(temp == count){
-                    return 1;
-                }
-            }else{
-                temp = 0;
-            }
-        }
-    }
-    return 0;
-}
+// int checkForConsecFreeSpace(unsigned char myByte, int count){
+//     int temp = 0;
+//     if(freeSpaceCounter(myByte) >= count){
+//         for(int i = 0; i < 8; i++){
+//             if(checkABit(myByte, i) == 0){
+//                 temp++;
+//                 if(temp == count){
+//                     return 1;
+//                 }
+//             }else{
+//                 temp = 0;
+//             }
+//         }
+//     }
+//     return 0;
+// }
 
 //1111 1100 0000 0000 1111 1111 0000 0000 0000 0000
 
@@ -125,6 +125,14 @@ int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
     }
 
     return firstFreeBlock;
+}
+
+int releaseFreeSpace(unsigned char* bitMap, int location, int size){
+  
+    for(int i = location; i < location+size; i++){
+        clearABit(bitMap, i);
+    }
+    return 0;
 }
 
 // int main(){
