@@ -173,7 +173,7 @@ b_io_fd b_open (char * filename, int flags)
 		LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, tempDEntries[0].location);
 
 		// //Set up FCB
-		// fcbArray[returnFd].buf = malloc(sizeof(char)*INIT_FILE_SIZE);
+		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
 		fcbArray[returnFd].index = 0;
 		fcbArray[returnFd].buflen = 0;
 		fcbArray[returnFd].flag = flags;
@@ -184,6 +184,28 @@ b_io_fd b_open (char * filename, int flags)
 		 
 	}
 
+	if(pi->value > -1){
+		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
+		fcbArray[returnFd].index = 0;
+		//TODO set up buflen
+		fcbArray[returnFd].buflen = 0;
+		fcbArray[returnFd].flag = flags;
+		fcbArray[returnFd].extentTable = getExtentTable(pi->DEPointer->extentLocation);
+		fcbArray[returnFd].DE = pi->DEPointer;
+
+		if(flags & O_APPEND == O_APPEND){
+			//Pointing the index to the end
+			b_seek(returnFd, fcbArray[returnFd].index, SEEK_END);
+		}
+
+		if(flags & O_TRUNC == O_TRUNC){
+			//TODO empty the file
+		}
+
+	}else{
+		printf("Error opening file! File does not exist!\n");
+		return -1;
+	}
 
 	
 	
