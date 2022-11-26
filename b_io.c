@@ -105,7 +105,7 @@ b_io_fd b_open (char * filename, int flags)
 
 	//fcbArray[returnFd].DE = pi->DEPointer;
 
-	if(flags | O_CREAT){
+	if((flags & O_CREAT) == O_CREAT){
 		if(pi->value != -1){
 			printf("File does not exist\n");
 			return -1;
@@ -152,14 +152,14 @@ b_io_fd b_open (char * filename, int flags)
 			getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, EXTENT_BLOCK_SIZE);
 
 		//Set up DEPointer in the FCB Struct
-		// fcbArray[returnFd].DE = malloc(sizeof(dirEntry));
-		// strcpy(fcbArray[returnFd].DE->name, tempDEntries[index].name);
-		// fcbArray[returnFd].DE->dirType = tempDEntries[index].dirType;
-		// fcbArray[returnFd].DE->location = tempDEntries[index].location ;
-		// fcbArray[returnFd].DE->size = tempDEntries[index].size;
-		// fcbArray[returnFd].DE->created = tempDEntries[index].created;
-		// fcbArray[returnFd].DE->lastModified = tempDEntries[index].lastModified;
-		// fcbArray[returnFd].DE->extentLocation = tempDEntries[index].extentLocation;
+		fcbArray[returnFd].DE = malloc(sizeof(dirEntry));
+		strcpy(fcbArray[returnFd].DE->name, tempDEntries[index].name);
+		fcbArray[returnFd].DE->dirType = tempDEntries[index].dirType;
+		fcbArray[returnFd].DE->location = tempDEntries[index].location ;
+		fcbArray[returnFd].DE->size = tempDEntries[index].size;
+		fcbArray[returnFd].DE->created = tempDEntries[index].created;
+		fcbArray[returnFd].DE->lastModified = tempDEntries[index].lastModified;
+		fcbArray[returnFd].DE->extentLocation = tempDEntries[index].extentLocation;
 
 		initExtentTable(tempDEntries[index].extentLocation);
 		extent* extentTable = getExtentTable(tempDEntries[index].extentLocation);
@@ -174,15 +174,16 @@ b_io_fd b_open (char * filename, int flags)
 
 		// //Set up FCB
 		// fcbArray[returnFd].buf = malloc(sizeof(char)*INIT_FILE_SIZE);
-		// fcbArray[returnFd].index = 0;
-		// fcbArray[returnFd].buflen = 0;
-		// fcbArray[returnFd].flag = flags;
-		// fcbArray[returnFd].extentTable = extentTable;
+		fcbArray[returnFd].index = 0;
+		fcbArray[returnFd].buflen = 0;
+		fcbArray[returnFd].flag = flags;
+		fcbArray[returnFd].extentTable = extentTable;
 
 		free(tempDEntries);
 		tempDEntries = NULL;
 		 
 	}
+
 
 	
 	
