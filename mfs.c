@@ -510,6 +510,14 @@ int fs_stat(const char *path, struct fs_stat *buf)
     return -1;   //on failure
 }
 
+dirEntry* getCwdEntries(){
+    return cwdEntries;
+}
+
+char* getCwdPath(){
+    return cwdPath;
+}
+
 int fs_rmdir(const char *pathname);
 int fs_delete(char* filename);	//removes a file
 //ParsePath
