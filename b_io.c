@@ -40,6 +40,8 @@ typedef struct b_fcb
 	int index;		//holds the current position in the buffer
 	int buflen;		//holds how many valid bytes are in the buffer
 	//ADDED
+	int fileIndex;   //holds the index tracking the whole file
+	int fileSize;	//holds the actual file size
 	int flag; 		//holds the permission of the file
 	dirEntry* DE; //holds the low level file info 
 	extent* extentTable; //holds the extent table of the file
@@ -99,99 +101,127 @@ b_io_fd b_open (char * filename, int flags)
 	
 	pathInfo* pi = parsePath(filename);
 	if(pi->value == -2){
-		printf("All fd in use\n");
+		printf("Path is invalid\n");
 		return -1;
 	}
-
-	//fcbArray[returnFd].DE = pi->DEPointer;
-
+	
 	if((flags & O_CREAT) == O_CREAT){
+		
 		if(pi->value != -1){
-			printf("File does not exist\n");
-			return -1;
-		}
-
-		int fileFreeSpace = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, INIT_FILE_SIZE);
-
-		if(fileFreeSpace == -1){
-			printf("No more free space\n");
-			return -1;
-		}
-		char* parentPath = getParentDirectory(pi->path);
-		pathInfo* parentPi = parsePath(parentPath);
-
-		dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
-		LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, parentPi->DEPointer->location);
-
-		//Find free directory Entry inside parent directory
-		int index = -1;
-		for(int i = 0; i < MAX_DIRENT_SIZE; i++){
-			if(tempDEntries[i].dirType == -1 && index != -1){
-				index = i;
-			}else{
-				if(strcmp(tempDEntries[i].name, filename) == 0){
-					printf("Filename already exist\n");
-					return -1;
-				}
+			if(flags | O_TRUNC == flags){
+				printf("File already exist\n");
+				return -1;
 			}
 		}
 
-		if(index == -1){
-			printf("Directory is full\n");
-			return -1;
+		if(flags | O_TRUNC == flags){
+			printf("I GOT IN\n");
+			int fileFreeSpace = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, INIT_FILE_SIZE);
+
+			if(fileFreeSpace == -1){
+				printf("No more free space\n");
+				return -1;
+			}
+			// char* parentPath = getParentDirectory(pi->path);
+			// pathInfo* parentPi = parsePath(parentPath);
+
+			// dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+			// LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, parentPi->DEPointer->location);
+
+			//Find free directory Entry inside parent directory
+			int index = -1;
+			for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+				if(cwdEntries[i].dirType == -1 && index == -1){
+					index = i;
+				}else{
+					if(strcmp(cwdEntries[i].name, filename) == 0){
+							printf("Filename already exist\n");
+							return -1;
+					}
+				}
+			}
+			
+			if(index == -1){
+				printf("Directory is full\n");
+				return -1;
+			}
+			//Initialize File Directory Entry inside Parent Directory
+			strcpy(cwdEntries[index].name, filename);
+			cwdEntries[index].dirType = 0;
+			cwdEntries[index].location = fileFreeSpace;
+			cwdEntries[index].size = 0;
+			time(&cwdEntries[index].created);
+			time(&cwdEntries[index].lastModified);
+
+			cwdEntries[index].extentLocation = 
+				getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, EXTENT_BLOCK_SIZE);
+
+			//Set up DEPointer in the FCB Struct
+			fcbArray[returnFd].DE = malloc(sizeof(dirEntry));
+			strcpy(fcbArray[returnFd].DE->name, cwdEntries[index].name);
+			fcbArray[returnFd].DE->dirType = cwdEntries[index].dirType;
+			fcbArray[returnFd].DE->location = cwdEntries[index].location ;
+			fcbArray[returnFd].DE->size = cwdEntries[index].size;
+			fcbArray[returnFd].DE->created = cwdEntries[index].created;
+			fcbArray[returnFd].DE->lastModified = cwdEntries[index].lastModified;
+			fcbArray[returnFd].DE->extentLocation = cwdEntries[index].extentLocation;
+
+			initExtentTable(cwdEntries[index].extentLocation);
+			extent* extentTable = getExtentTable(cwdEntries[index].extentLocation);
+			//Adding the first extent
+			addToExtentTable(extentTable, cwdEntries[index].location, INIT_FILE_SIZE);
+			
+			printf("%s, %d\n", cwdEntries[index].name, cwdEntries[index].location);
+
+			cwdEntries[0].size += DE_STRUCT_SIZE;
+            //Update .. if its the root directory
+            if(cwdEntries[0].location == cwdEntries[1].location){
+                cwdEntries[1].size += DE_STRUCT_SIZE;
+            };
+			//Write to disk
+			LBAwrite(extentTable, EXTENT_BLOCK_SIZE,cwdEntries[index].extentLocation);
+			updateBitMap(vcb.freeSpaceBitMap);
+			LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
+
+			// //Set up FCB
+			fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
+			fcbArray[returnFd].index = 0;
+			fcbArray[returnFd].buflen = 0;
+			fcbArray[returnFd].fileIndex = 0;
+			fcbArray[returnFd].fileSize = 0;
+			fcbArray[returnFd].flag = flags;
+			fcbArray[returnFd].extentTable = extentTable;
+		
+			return returnFd;
+
 		}
-		//Initialize File Directory Entry inside Parent Directory
-		strcpy(tempDEntries[index].name, filename);
-		tempDEntries[index].dirType = 0;
-		tempDEntries[index].location = fileFreeSpace;
-		tempDEntries[index].size = 0;
-		time(&tempDEntries[index].created);
-		time(&tempDEntries[index].lastModified);
-
-		tempDEntries[index].extentLocation = 
-			getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, EXTENT_BLOCK_SIZE);
-
-		//Set up DEPointer in the FCB Struct
-		fcbArray[returnFd].DE = malloc(sizeof(dirEntry));
-		strcpy(fcbArray[returnFd].DE->name, tempDEntries[index].name);
-		fcbArray[returnFd].DE->dirType = tempDEntries[index].dirType;
-		fcbArray[returnFd].DE->location = tempDEntries[index].location ;
-		fcbArray[returnFd].DE->size = tempDEntries[index].size;
-		fcbArray[returnFd].DE->created = tempDEntries[index].created;
-		fcbArray[returnFd].DE->lastModified = tempDEntries[index].lastModified;
-		fcbArray[returnFd].DE->extentLocation = tempDEntries[index].extentLocation;
-
-		initExtentTable(tempDEntries[index].extentLocation);
-		extent* extentTable = getExtentTable(tempDEntries[index].extentLocation);
-		//Adding the first extent
-		addToExtentTable(extentTable, tempDEntries[index].location, INIT_FILE_SIZE);
-
-
-		//Write to disk
-		LBAwrite(extentTable, EXTENT_BLOCK_SIZE,tempDEntries[index].extentLocation);
-		updateBitMap(vcb.freeSpaceBitMap);
-		LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, tempDEntries[0].location);
-
-		// //Set up FCB
-		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
-		fcbArray[returnFd].index = 0;
-		fcbArray[returnFd].buflen = 0;
-		fcbArray[returnFd].flag = flags;
-		fcbArray[returnFd].extentTable = extentTable;
-
-		free(tempDEntries);
-		tempDEntries = NULL;
-		 
 	}
+	
 
-	if(pi->value > -1){
+	if(pi->value >= 0){
 		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
 		fcbArray[returnFd].index = 0;
-		//TODO set up buflen
-		fcbArray[returnFd].buflen = 0;
+		fcbArray[returnFd].fileIndex = 0;
+		fcbArray[returnFd].fileSize = pi->DEPointer->size;
+
+		if(fcbArray[returnFd].fileSize >= 512){
+			fcbArray[returnFd].buflen = 512;
+		}else{
+			fcbArray[returnFd].buflen = fcbArray[returnFd].fileSize;
+		}
+
 		fcbArray[returnFd].flag = flags;
 		fcbArray[returnFd].extentTable = getExtentTable(pi->DEPointer->extentLocation);
 		fcbArray[returnFd].DE = pi->DEPointer;
+
+		//Find the index of the file in the current working directory
+		int indexInCwd = -1;
+		for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+			if(strcmp(pi->DEPointer->name, cwdEntries[i].name) == 0){
+				indexInCwd = i;
+				i = MAX_DIRENT_SIZE;
+			}
+		}
 
 		if(flags & O_APPEND == O_APPEND){
 			//Pointing the index to the end
@@ -199,15 +229,24 @@ b_io_fd b_open (char * filename, int flags)
 		}
 
 		if(flags & O_TRUNC == O_TRUNC){
-			//TODO empty the file
+			if(flags & O_WRONLY == O_WRONLY || flags & O_RDWR == O_RDWR){
+				//TODO empty the file
+				cwdEntries[indexInCwd].size = 0;
+				fcbArray[returnFd].fileSize = 0;
+				fcbArray[returnFd].buflen = 0;
+			}else{
+				printf("No write permission to truncate file\n");
+				return -1;
+			}	
 		}
+		time(&cwdEntries[indexInCwd].lastModified);
+		LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);	
+		
 
 	}else{
 		printf("Error opening file! File does not exist!\n");
 		return -1;
 	}
-
-	
 	
 	return (returnFd);						// all set
 	}
@@ -283,5 +322,9 @@ int b_read (b_io_fd fd, char * buffer, int count)
 // Interface to Close the file	
 int b_close (b_io_fd fd)
 	{
-
+		free(fcbArray[fd].buf);
+		fcbArray[fd].buf = NULL;
+		free(fcbArray[fd].DE);
+		free(fcbArray[fd].extentTable);
+		return 0;
 	}

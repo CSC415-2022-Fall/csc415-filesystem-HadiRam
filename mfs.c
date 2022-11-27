@@ -326,9 +326,9 @@ int fs_setcwd(char *pathname)
     pathInfo* pi = parsePath(pathname);
     
     if(pi->value >= 0){ 
-
-        //set both global variables
-
+        if(pi->DEPointer->dirType != 1){
+            return -1;
+        }
         //setting cwdEntries
         //lba read into buffer, dirEntry.location.
         
@@ -510,15 +510,25 @@ int fs_stat(const char *path, struct fs_stat *buf)
     return -1;   //on failure
 }
 
-//----GetFileInfo()-------------
+int fs_rmdir(const char *pathname);
+int fs_delete(char* filename);	//removes a file
+//ParsePath
+//cwdEntry
+//Set the DE to free state
 
-dirEntry * GetFileInfo (char * fname)
-{
-    pathInfo* pi = parsePath(fname);
+//freeExtentTable
+//ReleaseFreeSpace
 
-    if(pi->value >=0){
-        return pi->DEPointer;
-    }
+//UpdateBitMap
 
-    return NULL; //error
-}
+//Update cwdEntries[0].size
+/*
+cwdEntries[0].size += DE_STRUCT_SIZE;
+            //Update .. if its the root directory
+            if(cwdEntries[0].location == cwdEntries[1].location){
+                cwdEntries[1].size += DE_STRUCT_SIZE;
+            };
+*/
+
+//LBAwrite the cwdEntries on to disk
+
