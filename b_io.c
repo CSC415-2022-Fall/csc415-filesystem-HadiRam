@@ -133,11 +133,6 @@ b_io_fd b_open (char * filename, int flags)
 			for(int i = 0; i < MAX_DIRENT_SIZE; i++){
 				if(cwdEntries[i].dirType == -1 && index == -1){
 					index = i;
-				}else{
-					if(strcmp(cwdEntries[i].name, filename) == 0){
-							printf("Filename already exist\n");
-							return -1;
-					}
 				}
 			}
 			
@@ -174,10 +169,23 @@ b_io_fd b_open (char * filename, int flags)
 			printf("%s, %d\n", cwdEntries[index].name, cwdEntries[index].location);
 
 			cwdEntries[0].size += DE_STRUCT_SIZE;
+			printf("DE size:%d\n", cwdEntries[0].size);
             //Update .. if its the root directory
             if(cwdEntries[0].location == cwdEntries[1].location){
                 cwdEntries[1].size += DE_STRUCT_SIZE;
-            };
+            }else{
+				//Update Parent Directory on the size
+				dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+				LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+				for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+					if(strcmp(getLastPathElement(cwdPath), tempDEntries[i].name) == 0){
+						tempDEntries[i].size += DE_STRUCT_SIZE;
+						//Exit loop
+						i = MAX_DIRENT_SIZE;
+					}
+				}
+				LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+			}
 			//Write to disk
 			LBAwrite(extentTable, EXTENT_BLOCK_SIZE,cwdEntries[index].extentLocation);
 			updateBitMap(vcb.freeSpaceBitMap);
@@ -214,15 +222,6 @@ b_io_fd b_open (char * filename, int flags)
 		fcbArray[returnFd].extentTable = getExtentTable(pi->DEPointer->extentLocation);
 		fcbArray[returnFd].DE = pi->DEPointer;
 
-		//Find the index of the file in the current working directory
-		int indexInCwd = -1;
-		for(int i = 0; i < MAX_DIRENT_SIZE; i++){
-			if(strcmp(pi->DEPointer->name, cwdEntries[i].name) == 0){
-				indexInCwd = i;
-				i = MAX_DIRENT_SIZE;
-			}
-		}
-
 		if(flags & O_APPEND == O_APPEND){
 			//Pointing the index to the end
 			b_seek(returnFd, fcbArray[returnFd].index, SEEK_END);
@@ -231,7 +230,7 @@ b_io_fd b_open (char * filename, int flags)
 		if(flags & O_TRUNC == O_TRUNC){
 			if(flags & O_WRONLY == O_WRONLY || flags & O_RDWR == O_RDWR){
 				//TODO empty the file
-				cwdEntries[indexInCwd].size = 0;
+				cwdEntries[pi->value].size = 0;
 				fcbArray[returnFd].fileSize = 0;
 				fcbArray[returnFd].buflen = 0;
 			}else{
@@ -239,7 +238,7 @@ b_io_fd b_open (char * filename, int flags)
 				return -1;
 			}	
 		}
-		time(&cwdEntries[indexInCwd].lastModified);
+		time(&cwdEntries[pi->value].lastModified);
 		LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);	
 		
 

@@ -36,7 +36,6 @@ typedef u_int32_t uint32_t;
 
 //Global variable for working directory
 
-
 char * cwdPath;
 dirEntry * cwdEntries;
 
@@ -78,7 +77,7 @@ typedef struct
 //Helper Function
 pathInfo* parsePath(const char *pathname);
 char * getParentDirectory(const char *pathname);
-
+char * getLastPathElement(const char *pathname);
 
 // Key directory functions
 int fs_mkdir(const char *pathname, mode_t mode);

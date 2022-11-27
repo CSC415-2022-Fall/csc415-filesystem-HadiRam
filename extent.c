@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "fsLow.h"
+#include "bitMap.h"
+#include "vcb.h"
 
 extent* getExtentTable(int extentLocation){
     extent* extentTable = malloc(NUMBER_OF_EXTENT*sizeof(extent));
@@ -56,5 +58,19 @@ int getLBAFromFile(extent* extentTable, int location){
         }
     }
     return result;
+}
+
+void releaseFile(int extentLocation){
+    extent* extentTable = getExtentTable(extentLocation);
+    for(int i = 0; i < NUMBER_OF_EXTENT; i++){
+        if(extentTable[i].location != -1){
+            releaseFreeSpace(vcb.freeSpaceBitMap, extentTable[i].location, extentTable[i].count);
+            extentTable[i].location = -1;
+        }else{
+            //exit loop
+            i = NUMBER_OF_EXTENT;
+        }
+    }
+    updateBitMap(vcb.freeSpaceBitMap);
 }
 

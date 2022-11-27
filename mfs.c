@@ -4,6 +4,8 @@
 #include "dirEntry.h"
 #include "vcb.h"
 #include "bitMap.h"
+#include "extent.h"
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -459,8 +461,8 @@ int fs_isFile(char * filename)
             return 0;
         }
     } else {
-        printf("Invalid path\n");
-        return -1;
+        printf("Invalid filename\n");
+        return 0;
     }
 
     
@@ -471,18 +473,20 @@ int fs_isFile(char * filename)
 //return 1 if directory, 0 otherwise
 int fs_isDir(char * pathname)
 {
-    int index = fs_isFile(pathname);
+    pathInfo* pi = parsePath(pathname);
 
-    if (index == 1)
-    {       
-        return 0;
-    }
-    else if(index == 0) {
-        return 1;
-    }
-    else {
+    if(pi->value >= 0)
+    {
+        if(pi->DEPointer->dirType == 1)
+        {           
+            return 1;
+        }
+        else {
+            return 0;
+        }
+    } else {
         printf("Invalid path\n");
-        return -1;
+        return 0;
     }
 
 
@@ -510,16 +514,91 @@ int fs_stat(const char *path, struct fs_stat *buf)
     return -1;   //on failure
 }
 
-dirEntry* getCwdEntries(){
-    return cwdEntries;
+
+int fs_rmdir(const char *pathname){
+    int isEmpty = 0;
+    pathInfo* pi = parsePath(pathname);
+    if(pi->DEPointer->dirType != 1){
+        printf("Is not a directory\n");
+        return -1;
+    }
+    printf("SIze: %s, %d, %d\n",pi->path, pi->DEPointer->size, DE_STRUCT_SIZE*2);
+    if(pi->DEPointer->size != DE_STRUCT_SIZE*2){
+        isEmpty = 1;
+    }
+
+    if(isEmpty == 1){
+        printf("Directory is not empty!\n");
+        return -1;
+    }
+
+    char* parentPath = getParentDirectory(pi->path);
+    pathInfo* parentPi = parsePath(parentPath);
+    dirEntry* tempEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+    loadDirEntries(tempEntries, parentPi->DEPointer->location);
+
+    //Set DE to free state
+    tempEntries[pi->value].name[0] = '\0';
+    tempEntries[pi->value].dirType = -1;
+    releaseFreeSpace(vcb.freeSpaceBitMap, tempEntries[pi->value].location, tempEntries[pi->value].size);
+    tempEntries[pi->value].location = -1;
+    tempEntries[pi->value].size = 0;
+    tempEntries[pi->value].extentLocation = -1;
+
+    updateBitMap(vcb.freeSpaceBitMap);
+    tempEntries[0].size -= DE_STRUCT_SIZE;
+    //Update .. if its the root directory
+    if(tempEntries[0].location == tempEntries[1].location){
+        tempEntries[1].size -= DE_STRUCT_SIZE;
+    };
+    LBAwrite(tempEntries, MAX_DIRENT_SIZE, tempEntries[0].location);
+
+    return 0;
 }
 
-char* getCwdPath(){
-    return cwdPath;
-}
+int fs_delete(char* filename){
+    pathInfo* pi = parsePath(filename);
+    if(pi->value < 0){
+        printf("File doesn't exist\n");
+        return -1;
+    }
+    if(pi->DEPointer->dirType != 0){
+        printf("Is not a file\n");
+        return -1;
+    }
+    //Set DE to free state
+    cwdEntries[pi->value].name[0] = '\0';
+    cwdEntries[pi->value].dirType = -1;
+    releaseFreeSpace(vcb.freeSpaceBitMap, cwdEntries[pi->value].location, cwdEntries[pi->value].size);
+    cwdEntries[pi->value].location = -1;
+    cwdEntries[pi->value].size = 0;
+    releaseFile(cwdEntries[pi->value].extentLocation);
+    releaseFreeSpace(vcb.freeSpaceBitMap, cwdEntries[pi->value].extentLocation, EXTENT_BLOCK_SIZE);
+    cwdEntries[pi->value].extentLocation = -1;
 
-int fs_rmdir(const char *pathname);
-int fs_delete(char* filename);	//removes a file
+    updateBitMap(vcb.freeSpaceBitMap);
+    cwdEntries[0].size -= DE_STRUCT_SIZE;
+    //Update .. if its the root directory
+    if(cwdEntries[0].location == cwdEntries[1].location){
+        cwdEntries[1].size -= DE_STRUCT_SIZE;
+    }else{
+        char* parentDir = getLastPathElement(cwdPath);
+        dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+		LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+        for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+            if(strcmp(parentDir, tempDEntries[i].name) == 0){
+                tempDEntries[i].size -= DE_STRUCT_SIZE;
+                //Exit loop
+                i = MAX_DIRENT_SIZE;
+            }
+        }
+        LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+
+    }
+    LBAwrite(cwdEntries, MAX_DIRENT_SIZE, cwdEntries[0].location);
+    return 0;
+
+};	//removes a file
 //ParsePath
 //cwdEntry
 //Set the DE to free state
