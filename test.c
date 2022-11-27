@@ -1,14 +1,53 @@
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
+#include<string.h>
 
 
 int main(){
+char temPath[] = "/a//b//c//////d";
+char* pathTokens[64];
+pathTokens[0] = NULL;
+int tokenIndex = 0;
+char* temp[256];
+char* delim = "/";
 
-char *pathname = "./home";
-char* tempPath[256];
-strcpy(tempPath, pathname);
+char* token = strtok(temPath, delim);
 
-printf("%s, %d\n", tempPath, strlen(tempPath));
+
+while(token != NULL){
+    if(strcmp(token, "..") == 0){
+        if(tokenIndex == 0){
+            //DO NTH LIKE '.'
+        }else{
+            tokenIndex--;
+            pathTokens[tokenIndex] = NULL;
+        }
+        
+    }else if(strcmp(token, ".") == 0){
+        //DO NTH
+    }else{
+        pathTokens[tokenIndex] = token;
+        tokenIndex++;
+    }
+    token = strtok(NULL, delim);
+}
+
+
+for(int i = 0; i < tokenIndex; i++){
+    printf("%d: %s\n", i, pathTokens[i]);
+}
+
+// for(int i = 0; i < strlen(temPath); i++){
+//     temp[0] = '\0';
+
+//     while(temPath[i] == '/'){
+//         i++;
+//     }
+
+//     while(i < strlen(temPath) && temPath[i] != '/'){
+     
+//     }
+// }
 
 }

@@ -106,54 +106,14 @@ pathInfo* parsePath(const char *pathname)
     //Check if path is relative and make it absolute
     if (pathname[0] != '/')
     {
-        if(pathname[0] == '.'){
-            
-            if(pathname[1] == '.'){
-                //If its ".."
-                // a/b/c
-                // cd ../x/c
-                char* parentPath = getParentDirectory(cwdPath);
-                // '/'
-                strcpy(tempPath, parentPath);
-                char* temp = malloc(strlen(pathname) + 1);
-                strcpy(temp, pathname);
-                //Removing the ".."
-                temp++;
-                temp++;
-                //Removing the extra / if the parent is the root "/"
-                if((strlen(tempPath) == 1 && strlen(temp) != 0) || strlen(temp) == 1){
-                    temp++;
-                }
-                strcat(tempPath, temp);
-
-            }else{
-                //if its "."
-                strcpy(tempPath, cwdPath);
-                char* temp = malloc(strlen(pathname) + 1);
-                strcpy(temp, pathname);
-                temp++;
-                if(strlen(tempPath) == 1 && strlen(temp) != 0){
-                    temp++;
-                }
-                strcat(tempPath, temp);
-            }
-
-        }else{
-            //Append the relative path to the cwdPath
-            strcpy(tempPath, cwdPath);
-            if(tempPath[strlen(tempPath)-1] != '/'){
-                strcat(tempPath, "/");
-            }
-            strncat(tempPath, pathname, strlen(pathname));  
-        }    
+        strcpy(tempPath, cwdPath);
+        strcat(tempPath, "/");
+        strncat(tempPath, pathname, strlen(pathname));    
     }
     
     strcpy(result->path, tempPath);
     loadDirEntries(tempDirEntries, vcb.RootDir);  
     
-    
-    char tempPathArr[strlen(tempPath) + 1];
-    strcpy(tempPathArr, tempPath);
     //tokenize path with / as delimeter.
     char *token = strtok(tempPath, delim);
     char *pathTokens[64];
@@ -161,13 +121,25 @@ pathInfo* parsePath(const char *pathname)
 
     int tokenIndex = 0;
     
-    while (token != NULL)
-    {
-        pathTokens[tokenIndex] = token;
+    while(token != NULL){
+        if(strcmp(token, "..") == 0){
+            if(tokenIndex == 0){
+                //DO NTH LIKE '.'
+            }else{
+                //Pop the top of the stack
+                tokenIndex--;
+                pathTokens[tokenIndex] = NULL;
+            }
+                
+        }else if(strcmp(token, ".") == 0){
+            //DO NTH
+        }else{
+            //Add to the stack
+            pathTokens[tokenIndex] = token;
+            tokenIndex++;
+        }
         token = strtok(NULL, delim);
-        tokenIndex++;
-    }
-    
+        }
     //Check if the path is just "/"
     if(tokenIndex == 0){
         
@@ -178,8 +150,18 @@ pathInfo* parsePath(const char *pathname)
     }
     pathTokens[tokenIndex] = NULL;
     
-    
-    //Check if path exists
+    char* absolutePath = malloc(64);
+    absolutePath[0] = '\0';
+    for(int i = 0; i < tokenIndex; i++){
+        if(strcmp(pathTokens[0], ".") == 0){
+            strcat(absolutePath, delim);
+        }else{
+            strcat(absolutePath, delim);
+            strcat(absolutePath, pathTokens[i]);
+        }
+    }
+
+    strcpy(result->path, absolutePath);
     
     int exists = 0;
     int tokenCounter = 0;
