@@ -247,7 +247,7 @@ fdDir * fs_opendir(const char *pathname){
         fd->fileIndex = 0;
         return fd;
     }else{
-        printf("Invalid path\n");
+        printf("1.Invalid path\n");
         return NULL;
     }
 }
@@ -461,7 +461,6 @@ int fs_isFile(char * filename)
             return 0;
         }
     } else {
-        printf("Invalid filename\n");
         return 0;
     }
 
@@ -485,7 +484,6 @@ int fs_isDir(char * pathname)
             return 0;
         }
     } else {
-        printf("Invalid path\n");
         return 0;
     }
 

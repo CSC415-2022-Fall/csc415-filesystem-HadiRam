@@ -40,10 +40,9 @@ typedef struct b_fcb
 	int index;		//holds the current position in the buffer
 	int buflen;		//holds how many valid bytes are in the buffer
 	//ADDED
-	int fileIndex;   //holds the index tracking the whole file
+	int fileOffset;   //holds the index tracking the whole file
 	int fileSize;	//holds the actual file size
 	int flag; 		//holds the permission of the file
-	dirEntry* DE; //holds the low level file info 
 	extent* extentTable; //holds the extent table of the file
 
 	} b_fcb;
@@ -151,16 +150,6 @@ b_io_fd b_open (char * filename, int flags)
 			cwdEntries[index].extentLocation = 
 				getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, EXTENT_BLOCK_SIZE);
 
-			//Set up DEPointer in the FCB Struct
-			fcbArray[returnFd].DE = malloc(sizeof(dirEntry));
-			strcpy(fcbArray[returnFd].DE->name, cwdEntries[index].name);
-			fcbArray[returnFd].DE->dirType = cwdEntries[index].dirType;
-			fcbArray[returnFd].DE->location = cwdEntries[index].location ;
-			fcbArray[returnFd].DE->size = cwdEntries[index].size;
-			fcbArray[returnFd].DE->created = cwdEntries[index].created;
-			fcbArray[returnFd].DE->lastModified = cwdEntries[index].lastModified;
-			fcbArray[returnFd].DE->extentLocation = cwdEntries[index].extentLocation;
-
 			initExtentTable(cwdEntries[index].extentLocation);
 			extent* extentTable = getExtentTable(cwdEntries[index].extentLocation);
 			//Adding the first extent
@@ -169,7 +158,6 @@ b_io_fd b_open (char * filename, int flags)
 			printf("%s, %d\n", cwdEntries[index].name, cwdEntries[index].location);
 
 			cwdEntries[0].size += DE_STRUCT_SIZE;
-			printf("DE size:%d\n", cwdEntries[0].size);
             //Update .. if its the root directory
             if(cwdEntries[0].location == cwdEntries[1].location){
                 cwdEntries[1].size += DE_STRUCT_SIZE;
@@ -195,7 +183,7 @@ b_io_fd b_open (char * filename, int flags)
 			fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
 			fcbArray[returnFd].index = 0;
 			fcbArray[returnFd].buflen = 0;
-			fcbArray[returnFd].fileIndex = 0;
+			fcbArray[returnFd].fileOffset = 0;
 			fcbArray[returnFd].fileSize = 0;
 			fcbArray[returnFd].flag = flags;
 			fcbArray[returnFd].extentTable = extentTable;
@@ -209,7 +197,7 @@ b_io_fd b_open (char * filename, int flags)
 	if(pi->value >= 0){
 		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
 		fcbArray[returnFd].index = 0;
-		fcbArray[returnFd].fileIndex = 0;
+		fcbArray[returnFd].fileOffset = 0;
 		fcbArray[returnFd].fileSize = pi->DEPointer->size;
 
 		if(fcbArray[returnFd].fileSize >= 512){
@@ -220,12 +208,11 @@ b_io_fd b_open (char * filename, int flags)
 
 		fcbArray[returnFd].flag = flags;
 		fcbArray[returnFd].extentTable = getExtentTable(pi->DEPointer->extentLocation);
-		fcbArray[returnFd].DE = pi->DEPointer;
 
-		if(flags & O_APPEND == O_APPEND){
-			//Pointing the index to the end
-			b_seek(returnFd, fcbArray[returnFd].index, SEEK_END);
-		}
+		// if(flags & O_APPEND == O_APPEND){
+		// 	//Pointing the index to the end
+		// 	b_seek(returnFd, fcbArray[returnFd].index, SEEK_END);
+		// }
 
 		if(flags & O_TRUNC == O_TRUNC){
 			if(flags & O_WRONLY == O_WRONLY || flags & O_RDWR == O_RDWR){
@@ -261,9 +248,18 @@ int b_seek (b_io_fd fd, off_t offset, int whence)
 		{
 		return (-1); 					//invalid file descriptor
 		}
+	
+	if(whence & SEEK_SET == SEEK_SET){
+		fcbArray[fd].fileOffset = offset;
+	}else if(whence & SEEK_CUR == SEEK_CUR){
+		fcbArray[fd].fileOffset += offset;
+	}else if(whence & SEEK_END == SEEK_END){
+		fcbArray[fd].fileOffset += fcbArray[fd].fileSize + offset;
+	}else{
+		printf("Invalid SEEK flags\n");
+	}
 		
-		
-	return (0); //Change this
+	return fcbArray[fd].fileOffset; //Change this
 	}
 
 
@@ -314,8 +310,85 @@ int b_read (b_io_fd fd, char * buffer, int count)
 		{
 		return (-1); 					//invalid file descriptor
 		}
+	
+	//Keeping track of the offset in the caller buffer
+	int callerBufferOffset = 0;
+	//Keeping track of how much we want to memcpy
+	int copyAmount = 0;
+	//Keeping track of the remaining size of the file
+	int remainingFileSize = fcbArray[fd].fileSize - fcbArray[fd].fileOffset;
+	//Used to check return value of LBAread
+	int returnValue = 0;
+	//Keeping track of how many bytes the caller buffer still needs
+	int neededBytes = count;
+	//Keeping track of which block we are in
+	int fileBlockIndex = (fcbArray[fd].fileSize + B_CHUNK_SIZE - 1)/B_CHUNK_SIZE; 
+	//Rechecking the buffer index
+	fcbArray[fd].index = fcbArray[fd].fileOffset % B_CHUNK_SIZE;
+	//Setting neededBytes to remainingFileSize instead if neededBytes is larger
+	if(neededBytes > remainingFileSize){
+		neededBytes = remainingFileSize;
+	}
+
+	while(neededBytes > 0){
+		//Recalculating local variables
+		remainingFileSize = fcbArray[fd].fileSize - fcbArray[fd].fileOffset;
+
+		//Will do LBAread into the caller's buffer directly
+		if(fcbArray[fd].index == 0 && (neededBytes) >= B_CHUNK_SIZE){
+			// Number of blocks to be copied
+			int startingLocation;
+			int blockNeeded = neededBytes/B_CHUNK_SIZE;
+			copyAmount = blockNeeded*B_CHUNK_SIZE;
 		
-	return (0);	//Change this
+			//LBAread the file block directly into the caller's buffer
+			while(blockNeeded > 0){
+				startingLocation = getLBAFromFile(fcbArray[fd].extentTable, fileBlockIndex);
+				returnValue = LBAread(buffer + callerBufferOffset, 1, startingLocation);
+				//Erro checking
+				if(returnValue < 0){
+					return -1;
+				}
+				//Updating the FCB and local variables
+				fileBlockIndex++;
+				fcbArray[fd].fileOffset += B_CHUNK_SIZE;
+				callerBufferOffset += B_CHUNK_SIZE;
+			}		
+		}else{
+			//Check if there are any data left in the FCB Buffer
+			if(fcbArray[fd].index == 0){
+				//LBAread into fcb buffer
+				int startingLocation = getLBAFromFile(fcbArray[fd].extentTable, fileBlockIndex);
+				returnValue = LBAread(fcbArray[fd].buf, 1, startingLocation);
+				//Error checking
+				if(returnValue < 0){
+					return -1;
+				}
+			}
+			//Check if the neededBytes is larger than the remaining data in the 
+			//fcb buffer
+			if(neededBytes > B_CHUNK_SIZE - fcbArray[fd].index){
+				//Setting copyAmount (For memcpy)
+				copyAmount = B_CHUNK_SIZE - fcbArray[fd].index;
+				fileBlockIndex++;
+			}else{
+				//Setting copyAmount (For memcpy)
+				copyAmount = neededBytes;
+			}
+			//Copy data into the caller's buffer with copyAmount set earlier
+			memcpy(
+			buffer + callerBufferOffset, 
+			fcbArray[fd].buf + fcbArray[fd].index, copyAmount);
+			//Updating variables
+			fcbArray[fd].fileOffset += copyAmount;
+			callerBufferOffset += copyAmount;
+			fcbArray[fd].index = fcbArray[fd].fileOffset % B_CHUNK_SIZE;
+		}
+		
+		neededBytes -= copyAmount;
+	}
+
+	return callerBufferOffset;
 	}
 	
 // Interface to Close the file	
@@ -323,7 +396,6 @@ int b_close (b_io_fd fd)
 	{
 		free(fcbArray[fd].buf);
 		fcbArray[fd].buf = NULL;
-		free(fcbArray[fd].DE);
 		free(fcbArray[fd].extentTable);
 		return 0;
 	}
