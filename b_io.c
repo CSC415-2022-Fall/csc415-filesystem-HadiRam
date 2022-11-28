@@ -31,7 +31,8 @@
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
-#define INIT_FILE_SIZE 50
+#define INIT_FILE_SIZE 1
+#define ADDITIONAL_FILE_BLOCK 50
 
 typedef struct b_fcb
 	{
@@ -43,6 +44,8 @@ typedef struct b_fcb
 	int fileOffset;   //holds the index tracking the whole file
 	int fileSize;	//holds the actual file size
 	int flag; 		//holds the permission of the file
+	int directoryLocation;
+	int positionInDE;
 	extent* extentTable; //holds the extent table of the file
 
 	} b_fcb;
@@ -99,106 +102,103 @@ b_io_fd b_open (char * filename, int flags)
 	}
 	
 	pathInfo* pi = parsePath(filename);
+
 	if(pi->value == -2){
 		printf("Path is invalid\n");
 		return -1;
 	}
+	char* lastElement = getLastPathElement(pi->path);
 	
-	if((flags & O_CREAT) == O_CREAT){
+	if(flags & O_CREAT == O_CREAT && pi->value == -1){
 		
-		if(pi->value != -1){
-			if(flags | O_TRUNC == flags){
-				printf("File already exist\n");
-				return -1;
+		int fileFreeSpace = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, INIT_FILE_SIZE);
+
+		if(fileFreeSpace == -1){
+			printf("No more free space\n");
+			return -1;
+		}
+	
+
+		//Find free directory Entry inside parent directory
+		int index = -1;
+		for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+			if(cwdEntries[i].dirType == -1 && index == -1){
+				index = i;
 			}
 		}
+		
+		if(index == -1){
+			printf("Directory is full\n");
+			return -1;
+		}
+		//Initialize File Directory Entry inside Parent Directory
+		strcpy(cwdEntries[index].name, lastElement);
+		cwdEntries[index].dirType = 0;
+		cwdEntries[index].location = fileFreeSpace;
+		cwdEntries[index].size = 0;
+		time(&cwdEntries[index].created);
+		time(&cwdEntries[index].lastModified);
 
-		if(flags | O_TRUNC == flags){
-			printf("I GOT IN\n");
-			int fileFreeSpace = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, INIT_FILE_SIZE);
+		cwdEntries[index].extentLocation = 
+			getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, EXTENT_BLOCK_SIZE);
 
-			if(fileFreeSpace == -1){
-				printf("No more free space\n");
-				return -1;
-			}
-			// char* parentPath = getParentDirectory(pi->path);
-			// pathInfo* parentPi = parsePath(parentPath);
+		initExtentTable(cwdEntries[index].extentLocation);
+		extent* extentTable = getExtentTable(cwdEntries[index].extentLocation);
+		//Adding the first extent
+		addToExtentTable(extentTable, cwdEntries[index].location, INIT_FILE_SIZE);
+		updateExtentTable(extentTable, cwdEntries[index].extentLocation);
+		//printf("%s, %d\n", cwdEntries[index].name, cwdEntries[index].location);
 
-			// dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
-			// LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, parentPi->DEPointer->location);
-
-			//Find free directory Entry inside parent directory
-			int index = -1;
+		cwdEntries[0].size += DE_STRUCT_SIZE;
+		//Update .. if its the root directory
+		if(cwdEntries[0].location == cwdEntries[1].location){
+			cwdEntries[1].size += DE_STRUCT_SIZE;
+		}else{
+			//Update Parent Directory on the size
+			dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+			LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
 			for(int i = 0; i < MAX_DIRENT_SIZE; i++){
-				if(cwdEntries[i].dirType == -1 && index == -1){
-					index = i;
+				if(strcmp(getLastPathElement(cwdPath), tempDEntries[i].name) == 0){
+					tempDEntries[i].size += DE_STRUCT_SIZE;
+					//Exit loop
+					i = MAX_DIRENT_SIZE;
 				}
 			}
-			
-			if(index == -1){
-				printf("Directory is full\n");
-				return -1;
-			}
-			//Initialize File Directory Entry inside Parent Directory
-			strcpy(cwdEntries[index].name, filename);
-			cwdEntries[index].dirType = 0;
-			cwdEntries[index].location = fileFreeSpace;
-			cwdEntries[index].size = 0;
-			time(&cwdEntries[index].created);
-			time(&cwdEntries[index].lastModified);
-
-			cwdEntries[index].extentLocation = 
-				getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, EXTENT_BLOCK_SIZE);
-
-			initExtentTable(cwdEntries[index].extentLocation);
-			extent* extentTable = getExtentTable(cwdEntries[index].extentLocation);
-			//Adding the first extent
-			addToExtentTable(extentTable, cwdEntries[index].location, INIT_FILE_SIZE);
-			
-			printf("%s, %d\n", cwdEntries[index].name, cwdEntries[index].location);
-
-			cwdEntries[0].size += DE_STRUCT_SIZE;
-            //Update .. if its the root directory
-            if(cwdEntries[0].location == cwdEntries[1].location){
-                cwdEntries[1].size += DE_STRUCT_SIZE;
-            }else{
-				//Update Parent Directory on the size
-				dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
-				LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
-				for(int i = 0; i < MAX_DIRENT_SIZE; i++){
-					if(strcmp(getLastPathElement(cwdPath), tempDEntries[i].name) == 0){
-						tempDEntries[i].size += DE_STRUCT_SIZE;
-						//Exit loop
-						i = MAX_DIRENT_SIZE;
-					}
-				}
-				LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
-			}
-			//Write to disk
-			LBAwrite(extentTable, EXTENT_BLOCK_SIZE,cwdEntries[index].extentLocation);
-			updateBitMap(vcb.freeSpaceBitMap);
-			LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
-
-			// //Set up FCB
-			fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
-			fcbArray[returnFd].index = 0;
-			fcbArray[returnFd].buflen = 0;
-			fcbArray[returnFd].fileOffset = 0;
-			fcbArray[returnFd].fileSize = 0;
-			fcbArray[returnFd].flag = flags;
-			fcbArray[returnFd].extentTable = extentTable;
-		
-			return returnFd;
-
+			LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE,  cwdEntries[1].location);
 		}
+		//Write to disk
+		LBAwrite(extentTable, EXTENT_BLOCK_SIZE,cwdEntries[index].extentLocation);
+		updateBitMap(vcb.freeSpaceBitMap);
+		LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
+
+		// //Set up FCB
+		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
+		fcbArray[returnFd].buf[0] ='\0';
+		fcbArray[returnFd].index = 0;
+		fcbArray[returnFd].buflen = 0;
+		fcbArray[returnFd].fileOffset = 0;
+		fcbArray[returnFd].fileSize = 0;
+		fcbArray[returnFd].flag = flags;
+		fcbArray[returnFd].directoryLocation = cwdEntries[1].location;
+		fcbArray[returnFd].positionInDE = index;
+		fcbArray[returnFd].extentTable = extentTable;
+	
+		return returnFd;
+
 	}
 	
 
 	if(pi->value >= 0){
 		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
+		fcbArray[returnFd].buf[0] ='\0';
 		fcbArray[returnFd].index = 0;
 		fcbArray[returnFd].fileOffset = 0;
 		fcbArray[returnFd].fileSize = pi->DEPointer->size;
+		fcbArray[returnFd].positionInDE = pi->value;
+
+		char* parentPath = getParentDirectory(pi->path);
+		pathInfo* parentPi = parsePath(parentPath);
+		fcbArray[returnFd].directoryLocation = parentPi->DEPointer->location;
 
 		if(fcbArray[returnFd].fileSize >= 512){
 			fcbArray[returnFd].buflen = 512;
@@ -214,8 +214,8 @@ b_io_fd b_open (char * filename, int flags)
 		// 	b_seek(returnFd, fcbArray[returnFd].index, SEEK_END);
 		// }
 
-		if(flags & O_TRUNC == O_TRUNC){
-			if(flags & O_WRONLY == O_WRONLY || flags & O_RDWR == O_RDWR){
+		if((flags & O_TRUNC) == O_TRUNC){
+			if((flags & O_WRONLY) == O_WRONLY || (flags & O_RDWR) == O_RDWR){
 				//TODO empty the file
 				cwdEntries[pi->value].size = 0;
 				fcbArray[returnFd].fileSize = 0;
@@ -251,10 +251,10 @@ int b_seek (b_io_fd fd, off_t offset, int whence)
 	
 	if(whence & SEEK_SET == SEEK_SET){
 		fcbArray[fd].fileOffset = offset;
-	}else if(whence & SEEK_CUR == SEEK_CUR){
+	}else if((whence & SEEK_CUR) == SEEK_CUR){
 		fcbArray[fd].fileOffset += offset;
 	}else if(whence & SEEK_END == SEEK_END){
-		fcbArray[fd].fileOffset += fcbArray[fd].fileSize + offset;
+		fcbArray[fd].fileOffset += fcbArray[fd].fileOffset + offset;
 	}else{
 		printf("Invalid SEEK flags\n");
 	}
@@ -274,9 +274,95 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		{
 		return (-1); 					//invalid file descriptor
 		}
-		
-		
-	return (0); //Change this
+	
+
+	int neededBytes = count;
+	int callerBufferOffset = 0;
+
+	//Check if there is a write permission
+	if(!(((fcbArray[fd].flag & O_WRONLY) == O_WRONLY) || 
+		((fcbArray[fd].flag & O_RDWR) == O_RDWR))){
+		printf("No permission to write\n");
+		return -1; 
+	}
+
+	
+	int remainingBytes = B_CHUNK_SIZE - fcbArray[fd].fileOffset % B_CHUNK_SIZE;
+	//Check if we need more blocks
+	if(count > remainingBytes){
+		int neededBlocks = (count - remainingBytes + B_CHUNK_SIZE -1)/B_CHUNK_SIZE;
+		int newFileLocation = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, neededBlocks);
+		if(newFileLocation == -1){
+			printf("Disk is full\n");
+			return -1;
+		}
+		updateBitMap(vcb.freeSpaceBitMap);
+		int result = addToExtentTable(fcbArray[fd].extentTable, newFileLocation, neededBlocks);
+		if(result == -1){
+			printf("Out of Extent\n");
+			return -1;
+		}
+	}
+
+	while(neededBytes > 0){
+		if(remainingBytes > 0){
+			int currentBlock = (fcbArray[fd].fileOffset + B_CHUNK_SIZE - 1)/B_CHUNK_SIZE; 
+			int lbaPosition = getLBAFromFile(fcbArray[fd].extentTable, currentBlock);
+			int copyAmount = neededBytes;
+			if(neededBytes >= remainingBytes){
+				copyAmount = remainingBytes;
+			}
+			LBAread(fcbArray[fd].buf, 1, lbaPosition);
+			memcpy(fcbArray[fd].buf + fcbArray[fd].index, buffer + callerBufferOffset, copyAmount);
+
+			LBAwrite(fcbArray[fd].buf, 1, lbaPosition);
+			//Update variables
+			fcbArray[fd].fileOffset += copyAmount;
+			fcbArray[fd].index = fcbArray[fd].fileOffset % B_CHUNK_SIZE;
+			fcbArray[fd].fileSize += copyAmount;
+			neededBytes -= copyAmount;
+			callerBufferOffset += copyAmount;
+			remainingBytes -= copyAmount;
+			
+		}else{
+			
+			int currentBlock = (fcbArray[fd].fileOffset + B_CHUNK_SIZE - 1)/B_CHUNK_SIZE;
+			int lbaPosition = getLBAFromFile(fcbArray[fd].extentTable, currentBlock);
+			int copyAmount = 0;
+			if(neededBytes >= B_CHUNK_SIZE){
+				copyAmount = B_CHUNK_SIZE;
+			}else{
+				copyAmount = neededBytes;
+			}
+			memcpy(fcbArray[fd].buf + fcbArray[fd].index, buffer + callerBufferOffset, copyAmount);
+			LBAwrite(fcbArray[fd].buf, 1, lbaPosition);
+			//Update variables
+			fcbArray[fd].fileOffset += copyAmount;
+			fcbArray[fd].index = fcbArray[fd].fileOffset % B_CHUNK_SIZE;
+			fcbArray[fd].fileSize += copyAmount;
+			neededBytes -= copyAmount;
+			callerBufferOffset += copyAmount;
+			
+		}
+	}
+
+	
+
+	dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+	LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, fcbArray[fd].directoryLocation);
+	tempDEntries[fcbArray[fd].positionInDE].size += callerBufferOffset;
+	updateExtentTable(fcbArray[fd].extentTable,
+		tempDEntries[fcbArray[fd].positionInDE].extentLocation);
+
+	LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, fcbArray[fd].directoryLocation);
+	//Update CWD
+	LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
+	
+	free(tempDEntries);
+	tempDEntries = NULL;
+	
+	
+	return callerBufferOffset; //Change this
 	}
 
 
@@ -322,7 +408,7 @@ int b_read (b_io_fd fd, char * buffer, int count)
 	//Keeping track of how many bytes the caller buffer still needs
 	int neededBytes = count;
 	//Keeping track of which block we are in
-	int fileBlockIndex = (fcbArray[fd].fileSize + B_CHUNK_SIZE - 1)/B_CHUNK_SIZE; 
+	int fileBlockIndex = 0;
 	//Rechecking the buffer index
 	fcbArray[fd].index = fcbArray[fd].fileOffset % B_CHUNK_SIZE;
 	//Setting neededBytes to remainingFileSize instead if neededBytes is larger
@@ -344,6 +430,7 @@ int b_read (b_io_fd fd, char * buffer, int count)
 			//LBAread the file block directly into the caller's buffer
 			while(blockNeeded > 0){
 				startingLocation = getLBAFromFile(fcbArray[fd].extentTable, fileBlockIndex);
+				
 				returnValue = LBAread(buffer + callerBufferOffset, 1, startingLocation);
 				//Erro checking
 				if(returnValue < 0){

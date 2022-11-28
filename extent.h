@@ -12,8 +12,9 @@ typedef struct extent{
 
 extent* getExtentTable(int extentLocation);
 void initExtentTable(int extentLocation);
-void addToExtentTable(extent* extentTable, int location, int count);
+int addToExtentTable(extent* extentTable, int location, int count);
 int getLBAFromFile(extent* extentTable, int location);
 void releaseFile(int extentLocation);
+void updateExtentTable(extent* extentTable, int extentLocation);
 
 #endif

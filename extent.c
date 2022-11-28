@@ -23,7 +23,7 @@ void initExtentTable(int extentLocation){
     LBAwrite(extentTable, EXTENT_BLOCK_SIZE, extentLocation);
 }
 
-void addToExtentTable(extent* extentTable, int location, int count){
+int addToExtentTable(extent* extentTable, int location, int count){
     int flag = 0;
     for(int i = 0; i < NUMBER_OF_EXTENT; i++){
         if(extentTable[i].location == -1){
@@ -36,13 +36,18 @@ void addToExtentTable(extent* extentTable, int location, int count){
     }
     if(flag == 0){
         printf("out of row in the extent table\n");
+        return -1;
     };
+    return 0;
 }
 
 int getLBAFromFile(extent* extentTable, int location){
     int i = 0;
     int result;
     int index = location;
+    if(index == 0){
+        return extentTable[0].location;
+    }
     
     while( index > 0){
         if(index > extentTable[i].count){
@@ -72,5 +77,9 @@ void releaseFile(int extentLocation){
         }
     }
     updateBitMap(vcb.freeSpaceBitMap);
+}
+
+void updateExtentTable(extent* extentTable, int extentLocation){
+    LBAwrite(extentTable, 1, extentLocation);
 }
 
