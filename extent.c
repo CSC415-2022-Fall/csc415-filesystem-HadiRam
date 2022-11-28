@@ -70,6 +70,7 @@ void releaseFile(int extentLocation){
     for(int i = 0; i < NUMBER_OF_EXTENT; i++){
         if(extentTable[i].location != -1){
             releaseFreeSpace(vcb.freeSpaceBitMap, extentTable[i].location, extentTable[i].count);
+            //printf("Extent, File: %d, %d\n",extentLocation, extentTable[i].location);
             extentTable[i].location = -1;
         }else{
             //exit loop
@@ -80,6 +81,7 @@ void releaseFile(int extentLocation){
 }
 
 void updateExtentTable(extent* extentTable, int extentLocation){
+    //printf("Overwrite %d\n", extentLocation);
     LBAwrite(extentTable, 1, extentLocation);
 }
 

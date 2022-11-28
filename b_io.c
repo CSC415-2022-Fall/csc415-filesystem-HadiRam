@@ -110,14 +110,6 @@ b_io_fd b_open (char * filename, int flags)
 	char* lastElement = getLastPathElement(pi->path);
 	
 	if(flags & O_CREAT == O_CREAT && pi->value == -1){
-		
-		int fileFreeSpace = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, INIT_FILE_SIZE);
-
-		if(fileFreeSpace == -1){
-			printf("No more free space\n");
-			return -1;
-		}
-	
 
 		//Find free directory Entry inside parent directory
 		int index = -1;
@@ -134,20 +126,29 @@ b_io_fd b_open (char * filename, int flags)
 		//Initialize File Directory Entry inside Parent Directory
 		strcpy(cwdEntries[index].name, lastElement);
 		cwdEntries[index].dirType = 0;
+
+		//Finding the free space
+		cwdEntries[index].extentLocation = 
+			getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, EXTENT_BLOCK_SIZE);
+
+		initExtentTable(cwdEntries[index].extentLocation);
+		int fileFreeSpace = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, INIT_FILE_SIZE);
+		
+		if(fileFreeSpace == -1 || cwdEntries[index].extentLocation == -1){
+			printf("No more free space\n");
+			return -1;
+		}
+	
 		cwdEntries[index].location = fileFreeSpace;
 		cwdEntries[index].size = 0;
 		time(&cwdEntries[index].created);
 		time(&cwdEntries[index].lastModified);
 
-		cwdEntries[index].extentLocation = 
-			getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, EXTENT_BLOCK_SIZE);
-
-		initExtentTable(cwdEntries[index].extentLocation);
+		
 		extent* extentTable = getExtentTable(cwdEntries[index].extentLocation);
 		//Adding the first extent
 		addToExtentTable(extentTable, cwdEntries[index].location, INIT_FILE_SIZE);
 		updateExtentTable(extentTable, cwdEntries[index].extentLocation);
-		//printf("%s, %d\n", cwdEntries[index].name, cwdEntries[index].location);
 
 		cwdEntries[0].size += DE_STRUCT_SIZE;
 		//Update .. if its the root directory
@@ -170,7 +171,8 @@ b_io_fd b_open (char * filename, int flags)
 		LBAwrite(extentTable, EXTENT_BLOCK_SIZE,cwdEntries[index].extentLocation);
 		updateBitMap(vcb.freeSpaceBitMap);
 		LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
-
+		//Reload cwd
+		LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 		// //Set up FCB
 		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
 		fcbArray[returnFd].buf[0] ='\0';
@@ -182,7 +184,7 @@ b_io_fd b_open (char * filename, int flags)
 		fcbArray[returnFd].directoryLocation = cwdEntries[1].location;
 		fcbArray[returnFd].positionInDE = index;
 		fcbArray[returnFd].extentTable = extentTable;
-	
+		//printf("Extent: %d,File: %d, fileSize: %d\n",cwdEntries[index].extentLocation, cwdEntries[index].location, fcbArray[returnFd].fileSize);
 		return returnFd;
 
 	}
@@ -227,13 +229,14 @@ b_io_fd b_open (char * filename, int flags)
 		}
 		time(&cwdEntries[pi->value].lastModified);
 		LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);	
-		
+		//Reload cwd
+		LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 
 	}else{
 		printf("Error opening file! File does not exist!\n");
 		return -1;
 	}
-	
+	//printf("Extent: %d,File: %d\n",pi->DEPointer->extentLocation, pi->DEPointer->location);
 	return (returnFd);						// all set
 	}
 

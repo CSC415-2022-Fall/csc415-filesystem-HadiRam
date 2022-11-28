@@ -117,9 +117,10 @@ int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
 }
 
 int releaseFreeSpace(unsigned char* bitMap, int location, int size){
-  
+    
     for(int i = location; i < location+size; i++){
         clearABit(bitMap, i);
+        //printf("BitMap is releasing:%d\n ", i);
     }
     return 0;
 }

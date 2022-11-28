@@ -564,12 +564,13 @@ int fs_rmdir(const char *pathname){
         }
         LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
     }
-    LBAwrite(tempEntries, MAX_DIRENT_SIZE, tempEntries[0].location);
+    LBAwrite(tempEntries, DIRECTORY_BLOCKSIZE, tempEntries[0].location);
 
     return 0;
 }
 
 int fs_delete(char* filename){
+    
     pathInfo* pi = parsePath(filename);
     if(pi->value < 0){
         printf("File doesn't exist\n");
@@ -579,13 +580,15 @@ int fs_delete(char* filename){
         printf("Is not a file\n");
         return -1;
     }
+    printf("%d\n",pi->value);
     //Set DE to free state
     cwdEntries[pi->value].name[0] = '\0';
     cwdEntries[pi->value].dirType = -1;
-    releaseFreeSpace(vcb.freeSpaceBitMap, cwdEntries[pi->value].location, cwdEntries[pi->value].size);
+    
     cwdEntries[pi->value].location = -1;
     cwdEntries[pi->value].size = 0;
     releaseFile(cwdEntries[pi->value].extentLocation);
+    //printf("Releasing Extent:%d\n ", cwdEntries[pi->value].extentLocation);
     releaseFreeSpace(vcb.freeSpaceBitMap, cwdEntries[pi->value].extentLocation, EXTENT_BLOCK_SIZE);
     cwdEntries[pi->value].extentLocation = -1;
 
@@ -595,6 +598,7 @@ int fs_delete(char* filename){
     if(cwdEntries[0].location == cwdEntries[1].location){
         cwdEntries[1].size -= DE_STRUCT_SIZE;
     }else{
+        //printf("Not supposed to be here!\n");
         char* parentDir = getLastPathElement(cwdPath);
         dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
 		LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
@@ -608,27 +612,9 @@ int fs_delete(char* filename){
         LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
 
     }
-    LBAwrite(cwdEntries, MAX_DIRENT_SIZE, cwdEntries[0].location);
+    LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
+    //Reload cwd
+    LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
     return 0;
 
-};	//removes a file
-//ParsePath
-//cwdEntry
-//Set the DE to free state
-
-//freeExtentTable
-//ReleaseFreeSpace
-
-//UpdateBitMap
-
-//Update cwdEntries[0].size
-/*
-cwdEntries[0].size += DE_STRUCT_SIZE;
-            //Update .. if its the root directory
-            if(cwdEntries[0].location == cwdEntries[1].location){
-                cwdEntries[1].size += DE_STRUCT_SIZE;
-            };
-*/
-
-//LBAwrite the cwdEntries on to disk
-
+};	
