@@ -111,7 +111,6 @@ pathInfo* parsePath(const char *pathname)
         strncat(tempPath, pathname, strlen(pathname));    
     }
     
-    strcpy(result->path, tempPath);
     loadDirEntries(tempDirEntries, vcb.RootDir);  
     
     //tokenize path with / as delimeter.
@@ -239,12 +238,13 @@ fdDir * fs_opendir(const char *pathname){
         fdDir* fd = malloc(sizeof(fdDir));
 
         fd->dirPointer = malloc(MAX_DIRENT_SIZE*DE_STRUCT_SIZE);
-        //printf("Location:%d, size:%d\n", pi->DEPointer->location, pi->DEPointer->size);
+        printf("Location:%d, size:%d\n", pi->DEPointer->location, pi->DEPointer->size);
         loadDirEntries(fd->dirPointer, pi->DEPointer->location);
         fd->d_reclen = sizeof(fdDir);
         fd->directoryStartLocation = pi->DEPointer->location;
         fd->dirEntryPosition = 0;
         fd->dirSize = (fd->dirPointer[0].size)/DE_STRUCT_SIZE;
+        fd->fileIndex = 0;
         return fd;
     }else{
         printf("Invalid path\n");
@@ -255,9 +255,12 @@ fdDir * fs_opendir(const char *pathname){
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
     struct fs_diriteminfo* ii = malloc(sizeof(struct fs_diriteminfo));
     int exist = 0;
-    //printf("TEST: %d and %d\n",dirp->dirEntryPosition,dirp->dirPointer[0].size);
-    for(int i = dirp->dirEntryPosition; i < dirp->dirSize; i++){
-        if(dirp->dirPointer[i].dirType != -1){
+
+    if(dirp->fileIndex == dirp->dirSize){
+        return NULL;
+    }
+    for(int i = dirp->dirEntryPosition; i < MAX_DIRENT_SIZE; i++){
+        if(dirp->dirPointer[i].dirType == 0 || dirp->dirPointer[i].dirType == 1){
             strcpy(ii->d_name, dirp->dirPointer[i].name);
             //DEBUG
             //printf("%s and %d\n",dirp->dirPointer[i].name,dirp->dirPointer[i].location);
@@ -267,11 +270,14 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
             }else{
                 ii->fileType = '0';
             }
-            dirp->dirEntryPosition += 1;
-            //EXIT LOOP CONDITION
-            i = 69;
+            
+            dirp->fileIndex++;
+            
+            //Exit loop
+            i = MAX_DIRENT_SIZE;
             exist = 1;
         }
+        dirp->dirEntryPosition++;
     }
     if(exist == 0){
         ii = NULL;
@@ -377,6 +383,18 @@ int fs_mkdir(const char *pathname, mode_t mode)
             //Update .. if its the root directory
             if(cwdEntries[0].location == cwdEntries[1].location){
                 cwdEntries[1].size += DE_STRUCT_SIZE;
+            }else{
+                char* parentDir = getLastPathElement(cwdPath);
+                dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+                LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+                for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+                    if(strcmp(parentDir, tempDEntries[i].name) == 0){
+                        tempDEntries[i].size += DE_STRUCT_SIZE;
+                        //Exit loop
+                        i = MAX_DIRENT_SIZE;
+                    }
+                }
+                LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
             }
             i = 52;
         }
@@ -484,11 +502,10 @@ int fs_stat(const char *path, struct fs_stat *buf)
     
     //path is valid
     if (pi->value >= 0){
-        loadDirEntries(cwdEntries,pi->DEPointer->location);
-        buf->st_accesstime = cwdEntries->lastModified;
-        buf->st_size = cwdEntries->size;
-        buf->st_createtime = cwdEntries->created;
-        buf->st_modtime = cwdEntries->lastModified;
+        buf->st_accesstime = pi->DEPointer->lastModified;
+        buf->st_size = pi->DEPointer->size;
+        buf->st_createtime = pi->DEPointer->created;
+        buf->st_modtime = pi->DEPointer->lastModified;
 
         return 1; //success
     }
@@ -498,13 +515,17 @@ int fs_stat(const char *path, struct fs_stat *buf)
 
 
 int fs_rmdir(const char *pathname){
+    if(pathname[0] == '.'){
+        printf("Directory cannot be removed\n");
+        return -1;
+    }
     int isEmpty = 0;
     pathInfo* pi = parsePath(pathname);
     if(pi->DEPointer->dirType != 1){
         printf("Is not a directory\n");
         return -1;
     }
-    printf("SIze: %s, %d, %d\n",pi->path, pi->DEPointer->size, DE_STRUCT_SIZE*2);
+    printf("TEST: %s, %d, %d\n",pi->path, pi->DEPointer->size, DE_STRUCT_SIZE*2);
     if(pi->DEPointer->size != DE_STRUCT_SIZE*2){
         isEmpty = 1;
     }
@@ -532,7 +553,19 @@ int fs_rmdir(const char *pathname){
     //Update .. if its the root directory
     if(tempEntries[0].location == tempEntries[1].location){
         tempEntries[1].size -= DE_STRUCT_SIZE;
-    };
+    }else{
+        char* parentDir = getLastPathElement(cwdPath);
+        dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+        LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+        for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+            if(strcmp(parentDir, tempDEntries[i].name) == 0){
+                tempDEntries[i].size -= DE_STRUCT_SIZE;
+                //Exit loop
+                i = MAX_DIRENT_SIZE;
+            }
+        }
+        LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+    }
     LBAwrite(tempEntries, MAX_DIRENT_SIZE, tempEntries[0].location);
 
     return 0;
