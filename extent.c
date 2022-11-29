@@ -6,6 +6,20 @@
 #include "bitMap.h"
 #include "vcb.h"
 
+//Helper Function
+int getExtentTableSize(extent* extentTable){
+    int size = 0;
+    for(int i = 0; i < NUMBER_OF_EXTENT; i++){
+        if(extentTable[i].location != -1){
+            size++;
+        }else{
+            //break loop
+            i = NUMBER_OF_EXTENT;
+        }
+    }
+    return size;
+}   
+
 extent* getExtentTable(int extentLocation){
     extent* extentTable = malloc(NUMBER_OF_EXTENT*sizeof(extent));
     LBAread(extentTable, EXTENT_BLOCK_SIZE, extentLocation);
@@ -80,8 +94,61 @@ void releaseFile(int extentLocation){
     updateBitMap(vcb.freeSpaceBitMap);
 }
 
+void releaseFreeBlocksExtent(extent* extentTable, int location){
+    int maxRow = getExtentTableSize(extentTable);
+    int lbaPosition = getLBAFromFile(extentTable, location);
+    int found = 0;
+    for(int i = 0; i < maxRow; i++){
+        if(found == 0){
+            int maxCount = extentTable[i].location + extentTable[i].count;
+            for(int j = extentTable[i].location;j < maxCount; j++){
+                if(lbaPosition == j){
+                    found = 1;
+                    extentTable[i].count = j - extentTable[i].location;
+                    if(extentTable[i].count == 0){
+                        extentTable[i].count = -1;
+                        extentTable[i].location = -1;
+                    }
+                    releaseFreeSpace(vcb.freeSpaceBitMap, j, 1);
+                }else if(found == 1){
+                    releaseFreeSpace(vcb.freeSpaceBitMap, j, 1);
+                }
+            }
+        }else{
+            releaseFreeSpace(vcb.freeSpaceBitMap, extentTable[i].location, extentTable[i].count);
+            extentTable[i].count = -1;
+            extentTable[i].location = -1;
+        }
+    }
+}
+
 void updateExtentTable(extent* extentTable, int extentLocation){
     //printf("Overwrite %d\n", extentLocation);
     LBAwrite(extentTable, 1, extentLocation);
 }
 
+void printExtentTable(extent* extentTable){
+    int maxRow = getExtentTableSize(extentTable);
+    for(int i = 0; i < maxRow; i++){
+        printf("Row: (%d, %d)\n",extentTable[i].location, extentTable[i].count);
+    }
+}
+
+// int main(){
+//     extent* ext = malloc(64*sizeof(extent));
+//     for(int i = 0; i < NUMBER_OF_EXTENT; i++){
+//         ext[i].location = -1;
+//         ext[i].count = -1;
+//     }
+//     addToExtentTable(ext, 10, 6);
+//     addToExtentTable(ext, 26, 3);
+//     addToExtentTable(ext, 104, 2);
+//     addToExtentTable(ext, 77, 8);
+
+
+//     printExtentTable(ext);
+//     releaseFreeBlocksExtent(ext, 15);
+//     printf("\n\n");
+//     printExtentTable(ext);
+//     return 0;
+// }

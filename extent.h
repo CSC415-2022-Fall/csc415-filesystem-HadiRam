@@ -15,6 +15,7 @@ void initExtentTable(int extentLocation);
 int addToExtentTable(extent* extentTable, int location, int count);
 int getLBAFromFile(extent* extentTable, int location);
 void releaseFile(int extentLocation);
+void releaseFreeBlocksExtent(extent* extentTable, int location);
 void updateExtentTable(extent* extentTable, int extentLocation);
-
+void printExtentTable(extent* extentTable);
 #endif
