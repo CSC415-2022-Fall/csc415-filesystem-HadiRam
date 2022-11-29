@@ -10,6 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+//Initializing extern Global variables from mfs.h
+
+char* cwdPath;
+dirEntry* cwdEntries;
+
 
 //Helper Functions
 

@@ -36,8 +36,8 @@ typedef u_int32_t uint32_t;
 
 //Global variable for working directory
 
-char * cwdPath;
-dirEntry * cwdEntries;
+extern char * cwdPath;
+extern dirEntry * cwdEntries;
 
 void initGlobalVar();
 // This structure is returned by fs_readdir to provide the caller with information
