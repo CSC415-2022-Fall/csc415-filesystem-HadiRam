@@ -518,12 +518,13 @@ int fs_rmdir(const char *pathname){
         return -1;
     }
     int isEmpty = 0;
-    pathInfo* pi = parsePath(pathname);
+    pathInfo* pi = malloc(sizeof(parsePath));
+    pi = parsePath(pathname);
     if(pi->DEPointer->dirType != 1){
         printf("Is not a directory\n");
         return -1;
     }
-    printf("TEST: %s, %d, %d\n",pi->path, pi->DEPointer->size, DE_STRUCT_SIZE*2);
+    //printf("TEST: %s, %d, %d\n",pi->path, pi->DEPointer->size, DE_STRUCT_SIZE*2);
     if(pi->DEPointer->size != DE_STRUCT_SIZE*2){
         isEmpty = 1;
     }
@@ -534,7 +535,8 @@ int fs_rmdir(const char *pathname){
     }
 
     char* parentPath = getParentDirectory(pi->path);
-    pathInfo* parentPi = parsePath(parentPath);
+    pathInfo* parentPi = malloc(sizeof(parsePath));
+    parentPi = parsePath(parentPath);
     dirEntry* tempEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
     loadDirEntries(tempEntries, parentPi->DEPointer->location);
 

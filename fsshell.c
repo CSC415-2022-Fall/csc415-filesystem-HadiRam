@@ -303,11 +303,11 @@ int cmd_cat (int argcnt, char *argvec[])
 
 
         do 
-                {
-                readcnt = b_read (testfs_src_fd, buf, BUFFERLEN-1);
+                {					
+                readcnt = b_read (testfs_src_fd, buf, BUFFERLEN - 1);
                 buf[readcnt] = '\0';
-                printf("%s", buf);
-                } while (readcnt == BUFFERLEN);
+				printf("%s", buf);
+                } while (readcnt + 1 == BUFFERLEN );
         b_close (testfs_src_fd);
 #endif
         return 0;
@@ -459,7 +459,7 @@ int cmd_cp2l (int argcnt, char *argvec[])
 		{
 		readcnt = b_read (testfs_fd, buf, BUFFERLEN);
 		write (linux_fd, buf, readcnt);
-		} while (readcnt == BUFFERLEN);
+		} while (readcnt == BUFFERLEN );
 	b_close (testfs_fd);
 	close (linux_fd);
 #endif

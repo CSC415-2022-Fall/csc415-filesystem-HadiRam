@@ -109,7 +109,6 @@ b_io_fd b_open (char * filename, int flags)
 		printf("Path is invalid\n");
 		return -1;
 	}
-	char* lastElement = getLastPathElement(pi->path);
 	
 	if(flags & O_CREAT == O_CREAT && pi->value == -1){
 
@@ -126,7 +125,7 @@ b_io_fd b_open (char * filename, int flags)
 			return -1;
 		}
 		//Initialize File Directory Entry inside Parent Directory
-		strcpy(cwdEntries[index].name, lastElement);
+		strcpy(cwdEntries[index].name, filename);
 		cwdEntries[index].dirType = 0;
 
 		//Finding the free space
@@ -169,12 +168,14 @@ b_io_fd b_open (char * filename, int flags)
 			}
 			LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE,  cwdEntries[1].location);
 		}
+	
 		//Write to disk
 		LBAwrite(extentTable, EXTENT_BLOCK_SIZE,cwdEntries[index].extentLocation);
 		updateBitMap(vcb.freeSpaceBitMap);
 		LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 		//Reload cwd
 		LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
+	
 		// //Set up FCB
 		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
 		fcbArray[returnFd].buf[0] ='\0';
@@ -183,7 +184,7 @@ b_io_fd b_open (char * filename, int flags)
 		fcbArray[returnFd].fileSize = 0;
 		fcbArray[returnFd].fileBlocks = INIT_FILE_SIZE;
 		fcbArray[returnFd].flag = flags;
-		fcbArray[returnFd].directoryLocation = cwdEntries[1].location;
+		fcbArray[returnFd].directoryLocation = cwdEntries[0].location;
 		fcbArray[returnFd].positionInDE = index;
 		fcbArray[returnFd].extentTable = extentTable;
 		fcbArray[returnFd].extentLocation = cwdEntries[index].extentLocation;
@@ -202,18 +203,12 @@ b_io_fd b_open (char * filename, int flags)
 		fcbArray[returnFd].positionInDE = pi->value;
 		fcbArray[returnFd].fileBlocks = (fcbArray[returnFd].fileSize + B_CHUNK_SIZE -1)/B_CHUNK_SIZE;
 
-		char* parentPath = getParentDirectory(pi->path);
-		pathInfo* parentPi = parsePath(parentPath);
-		fcbArray[returnFd].directoryLocation = parentPi->DEPointer->location;
+		fcbArray[returnFd].directoryLocation = cwdEntries[0].location;
 
 		fcbArray[returnFd].flag = flags;
 		fcbArray[returnFd].extentTable = getExtentTable(pi->DEPointer->extentLocation);
 		fcbArray[returnFd].extentLocation = pi->DEPointer->extentLocation;
-		// if(flags & O_APPEND == O_APPEND){
-		// 	//Pointing the index to the end
-		// 	b_seek(returnFd, fcbArray[returnFd].index, SEEK_END);
-		// }
-
+		
 		if((flags & O_TRUNC) == O_TRUNC){
 			if((flags & O_WRONLY) == O_WRONLY || (flags & O_RDWR) == O_RDWR){
 				//TODO empty the file
@@ -225,6 +220,7 @@ b_io_fd b_open (char * filename, int flags)
 				return -1;
 			}	
 		}
+
 		time(&cwdEntries[pi->value].lastModified);
 		LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);	
 		//Reload cwd
@@ -234,8 +230,7 @@ b_io_fd b_open (char * filename, int flags)
 		printf("Error opening file! File does not exist!\n");
 		return -1;
 	}
-	printf("Extent: %d,File: %d, Size: %d\n",pi->DEPointer->extentLocation, pi->DEPointer->location, fcbArray[returnFd].fileSize);
-	printf("Extent Location: %d, %d\n", fcbArray[returnFd].extentTable[0].location, fcbArray[returnFd].extentTable[0].count );
+	//printf("Extent: %d,File: %d, Count: %d\n",pi->DEPointer->extentLocation, pi->DEPointer->location, fcbArray[returnFd].extentTable[0].count );
 	return (returnFd);						// all set
 	
 	}
@@ -352,7 +347,6 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		}
 	}
 
-	
 
 	dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
 	LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, fcbArray[fd].directoryLocation);
@@ -412,11 +406,12 @@ int b_read (b_io_fd fd, char * buffer, int count)
 	//Used to check return value of LBAread
 	int returnValue = 0;
 	//Keeping track of how many bytes the caller buffer still needs
-	int neededBytes = count + 1;
+	int neededBytes = count;
 	//Keeping track of which block we are in
 	int fileBlockIndex = fcbArray[fd].fileOffset / B_CHUNK_SIZE;
 	//Rechecking the buffer index
 	fcbArray[fd].index = fcbArray[fd].fileOffset % B_CHUNK_SIZE;
+	//printf("D: %d, %d, %d, %d\n",fcbArray[fd].fileOffset, fcbArray[fd].fileSize, fcbArray[fd].extentLocation, fcbArray[fd].extentTable[0].location);
 	//Setting neededBytes to remainingFileSize instead if neededBytes is larger
 	if(neededBytes > remainingFileSize){
 		neededBytes = remainingFileSize;
@@ -490,16 +485,18 @@ int b_read (b_io_fd fd, char * buffer, int count)
 int b_close (b_io_fd fd)
 	{	
 		if(fcbArray[fd].fileBlocks > (fcbArray[fd].fileSize + B_CHUNK_SIZE -1)/B_CHUNK_SIZE){
-			int location = (fcbArray[fd].fileSize + B_CHUNK_SIZE -1)/B_CHUNK_SIZE + 1;
-			int extentLocation = fcbArray[fd].extentTable[0].location;
+			int location = fcbArray[fd].fileSize/B_CHUNK_SIZE;
+			location++;
+			//printf("Location: %d\n", location);
 			//printExtentTable(fcbArray[fd].extentTable);
 			releaseFreeBlocksExtent(fcbArray[fd].extentTable, location);
 			//printExtentTable(fcbArray[fd].extentTable);
 			updateExtentTable(fcbArray[fd].extentTable, fcbArray[fd].extentLocation);
 			updateBitMap(vcb.freeSpaceBitMap);
-		
 			
 		}
+		//reload cwd
+		LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 		free(fcbArray[fd].buf);
 		fcbArray[fd].buf = NULL;
 		free(fcbArray[fd].extentTable);
