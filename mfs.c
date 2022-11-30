@@ -642,16 +642,23 @@ int fs_move(char* src, char* dest){
         return -1;
     }
     
+    //Check the if the destination is a directory
     int isDir = fs_isDir(destPi->path);
-    
+
     char* oldCwdPath = malloc(strlen(cwdPath));
     strcpy(oldCwdPath, cwdPath);
 
-    char* parentDirDest = getParentDirectory(dest);
-    fs_setcwd(parentDirDest);
+    //Change the path to the destination directory
+    if(isDir != 1){
+        char* parentDirDest = getParentDirectory(dest);
+        fs_setcwd(parentDirDest);
+    }else{
+        fs_setcwd(destPi->path);
+    }
+    
 
     int fileIndex;
-    if(destPi->value == -1){
+    if(destPi->value == -1 || isDir == 1){
         for(int i = 0; i < MAX_DIRENT_SIZE; i++){
             if(cwdEntries[i].dirType == -1){
                 fileIndex = i;
@@ -664,7 +671,12 @@ int fs_move(char* src, char* dest){
     }
     
    
-    char* destName = getLastPathElement(destPi->path);
+    char* destName;
+
+    if(isDir != 1)
+        destName = getLastPathElement(destPi->path);
+    else
+        destName = getLastPathElement(srcPi->path);
 
     strcpy(cwdEntries[fileIndex].name, destName);
     cwdEntries[fileIndex].dirType = 0;
