@@ -10,6 +10,7 @@
         "fslow.h": "c",
         "mfs.h": "c",
         "fcntl.h": "c",
-        "bitmap.h": "c"
+        "bitmap.h": "c",
+        "string.h": "c"
     }
 }

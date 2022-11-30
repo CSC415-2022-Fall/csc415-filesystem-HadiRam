@@ -93,6 +93,8 @@ char * getParentDirectory(const char *pathname){
 pathInfo* parsePath(const char *pathname)
 {
     pathInfo* result = malloc(sizeof(pathInfo));
+    result->DEPointer = malloc(sizeof(dirEntry));
+
     int entryIndex = 0;
     char *delim = "/";
     char tempPath[256];
@@ -102,10 +104,7 @@ pathInfo* parsePath(const char *pathname)
     dirEntry* tempDirEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
     char * DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
 
-
-    dirEntry* tempDE= malloc(sizeof(tempDE));
-    tempDE = NULL;
-
+    
     
     //if its absolute, the first character is a slash.
     //Check if path is relative and make it absolute
@@ -194,10 +193,12 @@ pathInfo* parsePath(const char *pathname)
 
             if(tokenCounter != tokenIndex - 1){
                 entryIndex = -2;
+                result->DEPointer = NULL;
                 break;
             }else{
                 //Path does exist but element does not exist
                 entryIndex = -1;
+                result->DEPointer = NULL;
                 break;
             }
         }else if(exists == 1){
@@ -208,21 +209,25 @@ pathInfo* parsePath(const char *pathname)
                 exists = 0;
                 tokenCounter++;
             }else{
-                //Found the file/directory and return the DE index of Dir[n-1]
-                tempDE = &tempDirEntries[entryIndex];
                 
+                //Found the file/directory and return the DE index of Dir[n-1]
+               
+                strcpy(result->DEPointer->name, tempDirEntries[entryIndex].name);
+                result->DEPointer->created = tempDirEntries[entryIndex].created;
+                result->DEPointer->size = tempDirEntries[entryIndex].size;
+                result->DEPointer->dirType = tempDirEntries[entryIndex].dirType;
+                result->DEPointer->extentLocation = tempDirEntries[entryIndex].extentLocation;
+                result->DEPointer->lastModified = tempDirEntries[entryIndex].lastModified;
+                result->DEPointer->location = tempDirEntries[entryIndex].location;
+
                 break;
             }
         }
 
     }
-     
+    
     free(tempDirEntries);
     free(DEBuffer);
-    
-    
-
-    result->DEPointer = tempDE;
 
     result->value = entryIndex;
     
@@ -234,7 +239,10 @@ pathInfo* parsePath(const char *pathname)
 
 
 fdDir * fs_opendir(const char *pathname){
-    pathInfo* pi = parsePath(pathname);
+    pathInfo* pi = malloc(sizeof(pathInfo));
+    pi->DEPointer = malloc(sizeof(dirEntry));
+    pi = parsePath(pathname);
+
     if(pi->value >= 0){
         if(pi->DEPointer->dirType != 1){
             printf("Not a directory\n");
@@ -317,7 +325,9 @@ int fs_setcwd(char *pathname)
         return 0;
     }
     
-    pathInfo* pi = parsePath(pathname);
+    pathInfo* pi = malloc(sizeof(pathInfo));
+    pi->DEPointer = malloc(sizeof(dirEntry));
+    pi = parsePath(pathname);
     
     if(pi->value >= 0){ 
         if(pi->DEPointer->dirType != 1){
@@ -345,8 +355,9 @@ int fs_setcwd(char *pathname)
 //returns -1 if there was an error and directory was not created.
 int fs_mkdir(const char *pathname, mode_t mode)
 {
-    
-    pathInfo* pi = parsePath(pathname);
+    pathInfo* pi = malloc(sizeof(pathInfo));
+    pi->DEPointer = malloc(sizeof(dirEntry));
+    pi = parsePath(pathname);
     // Get the path excluding the last directory/file.
     if(pi->value != -1){
         return -1;
@@ -452,8 +463,9 @@ int fs_isFile(char * filename)
 {
     //if filename is a path, we have to parse it
    
-
-    pathInfo* pi = parsePath(filename);
+    pathInfo* pi = malloc(sizeof(pathInfo));
+    pi->DEPointer = malloc(sizeof(dirEntry));
+    pi = parsePath(filename);
 
     if(pi->value >= 0)
     {
@@ -475,8 +487,10 @@ int fs_isFile(char * filename)
 //------------- fs_isDir --------------
 //return 1 if directory, 0 otherwise
 int fs_isDir(char * pathname)
-{
-    pathInfo* pi = parsePath(pathname);
+{   
+    pathInfo* pi = malloc(sizeof(pathInfo));
+    pi->DEPointer = malloc(sizeof(dirEntry));
+    pi = parsePath(pathname);
 
     if(pi->value >= 0)
     {
@@ -499,8 +513,9 @@ int fs_isDir(char * pathname)
 int fs_stat(const char *path, struct fs_stat *buf)
 {
     //first parse the path
-     
-    pathInfo* pi = parsePath(path);
+    pathInfo* pi = malloc(sizeof(pathInfo));
+    pi->DEPointer = malloc(sizeof(dirEntry));
+    pi = parsePath(path);
     
     //path is valid
     if (pi->value >= 0){
@@ -522,7 +537,8 @@ int fs_rmdir(const char *pathname){
         return -1;
     }
     int isEmpty = 0;
-    pathInfo* pi = malloc(sizeof(parsePath));
+    pathInfo* pi = malloc(sizeof(pathInfo));
+    pi->DEPointer = malloc(sizeof(dirEntry));
     pi = parsePath(pathname);
     if(pi->DEPointer->dirType != 1){
         printf("Is not a directory\n");
@@ -539,7 +555,10 @@ int fs_rmdir(const char *pathname){
     }
 
     char* parentPath = getParentDirectory(pi->path);
-    pathInfo* parentPi = malloc(sizeof(parsePath));
+
+    pathInfo* parentPi = malloc(sizeof(pathInfo));
+    parentPi->DEPointer = malloc(sizeof(dirEntry));
+
     parentPi = parsePath(parentPath);
     dirEntry* tempEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
     loadDirEntries(tempEntries, parentPi->DEPointer->location);
@@ -576,8 +595,9 @@ int fs_rmdir(const char *pathname){
 }
 
 int fs_delete(char* filename){
-    
-    pathInfo* pi = parsePath(filename);
+    pathInfo* pi = malloc(sizeof(pathInfo));
+    pi->DEPointer = malloc(sizeof(dirEntry));
+    pi = parsePath(filename);
     if(pi->value < 0){
         printf("File doesn't exist\n");
         return -1;
@@ -627,11 +647,15 @@ int fs_delete(char* filename){
 
 int fs_move(char* src, char* dest){
     pathInfo* srcPi = malloc(sizeof(pathInfo));
+    srcPi->DEPointer = malloc(sizeof(dirEntry));
     pathInfo* destPi = malloc(sizeof(pathInfo));
+    destPi->DEPointer = malloc(sizeof(dirEntry));
     
     srcPi = parsePath(src);
+    printf("1Here: %s, %d, %d\n", srcPi->path, srcPi->DEPointer->size, srcPi->DEPointer->location);
     destPi = parsePath(dest);
 
+    printf("2Here: %s, %d, %d\n", srcPi->path, srcPi->DEPointer->size, srcPi->DEPointer->location);
     if(srcPi->value < 0){
         printf("Source File doesn't exist\n");
         return -1;
@@ -678,6 +702,8 @@ int fs_move(char* src, char* dest){
     else
         destName = getLastPathElement(srcPi->path);
 
+    printf("3Here: %s, %d, %d\n", srcPi->path, srcPi->DEPointer->size, srcPi->DEPointer->location);
+
     strcpy(cwdEntries[fileIndex].name, destName);
     cwdEntries[fileIndex].dirType = 0;
     cwdEntries[fileIndex].location = srcPi->DEPointer->location;
@@ -715,7 +741,12 @@ int fs_move(char* src, char* dest){
     fs_setcwd(parentDirSrc);  
     fs_delete(srcPi->path);
     fs_setcwd(oldCwdPath);
- 
+    
+    free(srcPi->DEPointer);
+    free(srcPi);
+    free(destPi->DEPointer);
+    free(destPi);
+
     return 0;
 
 }
