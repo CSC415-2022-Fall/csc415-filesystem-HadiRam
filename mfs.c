@@ -309,9 +309,8 @@ char *fs_getcwd(char *pathname, size_t size)
 //setting current working directory
 int fs_setcwd(char *pathname)
 {
-    // cd John
-    //cwd a/b/John
-    //check if the path exists
+    //Write current working directory back to disk
+    LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 
     if(strcmp(pathname, "./") == 0 ){
 
@@ -625,3 +624,86 @@ int fs_delete(char* filename){
     return 0;
 
 };	
+
+int fs_move(char* src, char* dest){
+    pathInfo* srcPi = malloc(sizeof(pathInfo));
+    pathInfo* destPi = malloc(sizeof(pathInfo));
+    
+    srcPi = parsePath(src);
+    destPi = parsePath(dest);
+
+    if(srcPi->value < 0){
+        printf("Source File doesn't exist\n");
+        return -1;
+    }
+
+    if(destPi->value == -2){
+        printf("Destination directory doesn't exist\n");
+        return -1;
+    }
+    
+    int isDir = fs_isDir(destPi->path);
+    
+    char* oldCwdPath = malloc(strlen(cwdPath));
+    strcpy(oldCwdPath, cwdPath);
+
+    char* parentDirDest = getParentDirectory(dest);
+    fs_setcwd(parentDirDest);
+
+    int fileIndex;
+    if(destPi->value == -1){
+        for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+            if(cwdEntries[i].dirType == -1){
+                fileIndex = i;
+                //Exit Loop
+                i = MAX_DIRENT_SIZE;
+            }
+        }
+    }else{
+        fileIndex = destPi->value;
+    }
+    
+   
+    char* destName = getLastPathElement(destPi->path);
+
+    strcpy(cwdEntries[fileIndex].name, destName);
+    cwdEntries[fileIndex].dirType = 0;
+    cwdEntries[fileIndex].location = srcPi->DEPointer->location;
+    cwdEntries[fileIndex].created = srcPi->DEPointer->created;
+    time(&cwdEntries[fileIndex].lastModified);
+    cwdEntries[fileIndex].size = srcPi->DEPointer->size;
+    cwdEntries[fileIndex].extentLocation = srcPi->DEPointer->extentLocation;
+
+    cwdEntries[0].size +=  DE_STRUCT_SIZE;
+
+    
+
+    //Root Directory
+    if(cwdEntries[0].location == cwdEntries[1].location){
+        cwdEntries[1].size += DE_STRUCT_SIZE;
+    }else{
+        
+        //Update the parent of current directory
+        char* parentDir = getLastPathElement(cwdPath);
+        dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
+		LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+        for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+            if(strcmp(parentDir, tempDEntries[i].name) == 0){
+                tempDEntries[i].size += DE_STRUCT_SIZE;
+                //Exit loop
+                i = MAX_DIRENT_SIZE;
+            }
+        }
+        LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+        
+    }
+
+    char* parentDirSrc = getParentDirectory(srcPi->path);
+    
+    fs_setcwd(parentDirSrc);  
+    fs_delete(srcPi->path);
+    fs_setcwd(oldCwdPath);
+ 
+    return 0;
+
+}
