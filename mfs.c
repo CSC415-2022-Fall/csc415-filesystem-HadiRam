@@ -251,7 +251,7 @@ fdDir * fs_opendir(const char *pathname){
         fdDir* fd = malloc(sizeof(fdDir));
 
         fd->dirPointer = malloc(MAX_DIRENT_SIZE*DE_STRUCT_SIZE);
-        printf("Location:%d, size:%d\n", pi->DEPointer->location, pi->DEPointer->size);
+        //printf("Location:%d, size:%d\n", pi->DEPointer->location, pi->DEPointer->size);
         loadDirEntries(fd->dirPointer, pi->DEPointer->location);
         fd->d_reclen = sizeof(fdDir);
         fd->directoryStartLocation = pi->DEPointer->location;
@@ -260,7 +260,7 @@ fdDir * fs_opendir(const char *pathname){
         fd->fileIndex = 0;
         return fd;
     }else{
-        printf("1.Invalid path\n");
+        //printf("1.Invalid path\n");
         return NULL;
     }
 }
@@ -317,7 +317,7 @@ char *fs_getcwd(char *pathname, size_t size)
 //setting current working directory
 int fs_setcwd(char *pathname)
 {
-    printf("set new dir\n");
+    //printf("set new dir\n");
     //Write current working directory back to disk
     LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 
@@ -607,7 +607,7 @@ int fs_delete(char* filename){
         printf("Is not a file\n");
         return -1;
     }
-    printf("%d\n",pi->value);
+
     //Set DE to free state
     cwdEntries[pi->value].name[0] = '\0';
     cwdEntries[pi->value].dirType = -1;
@@ -672,7 +672,6 @@ int fs_move(char* src, char* dest){
 
     char* oldCwdPath = malloc(strlen(cwdPath));
     strcpy(oldCwdPath, cwdPath);
-    printf("%s, %s\n", srcPi->DEPointer->name, destPi->path);
     //Change the path to the destination directory
     if(isDir != 1){
         char* parentDirDest = getParentDirectory(destPi->path);
@@ -680,7 +679,6 @@ int fs_move(char* src, char* dest){
     }else{
         fs_setcwd(destPi->path);
     }
-    printf("%s, %s\n", srcPi->DEPointer->name, destPi->DEPointer->name);
 
     int fileIndex;
     if(destPi->value == -1 || isDir == 1){
