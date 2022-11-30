@@ -317,6 +317,7 @@ char *fs_getcwd(char *pathname, size_t size)
 //setting current working directory
 int fs_setcwd(char *pathname)
 {
+    printf("set new dir\n");
     //Write current working directory back to disk
     LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 
@@ -345,7 +346,7 @@ int fs_setcwd(char *pathname)
         //success
         return 0;
     }
-
+    
     //if fails
     return -1;
 }
@@ -664,20 +665,22 @@ int fs_move(char* src, char* dest){
         return -1;
     }
     
+    
     //Check the if the destination is a directory
-    int isDir = fs_isDir(destPi->path);
+    int isDir = fs_isDir(destPi->path); 
+    
 
     char* oldCwdPath = malloc(strlen(cwdPath));
     strcpy(oldCwdPath, cwdPath);
-
+    printf("%s, %s\n", srcPi->DEPointer->name, destPi->path);
     //Change the path to the destination directory
     if(isDir != 1){
-        char* parentDirDest = getParentDirectory(dest);
+        char* parentDirDest = getParentDirectory(destPi->path);
         fs_setcwd(parentDirDest);
     }else{
         fs_setcwd(destPi->path);
     }
-    
+    printf("%s, %s\n", srcPi->DEPointer->name, destPi->DEPointer->name);
 
     int fileIndex;
     if(destPi->value == -1 || isDir == 1){

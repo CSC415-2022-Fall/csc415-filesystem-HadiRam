@@ -103,7 +103,9 @@ b_io_fd b_open (char * filename, int flags)
 		return -1;
 	}
 	
-	pathInfo* pi = parsePath(filename);
+	pathInfo* pi = malloc(sizeof(pathInfo));
+	pi->DEPointer = malloc(sizeof(dirEntry));
+	pi = parsePath(filename);
 
 	if(pi->value == -2){
 		printf("Path is invalid\n");
@@ -167,6 +169,7 @@ b_io_fd b_open (char * filename, int flags)
 				}
 			}
 			LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE,  cwdEntries[1].location);
+			free(tempDEntries);
 		}
 	
 		//Write to disk
@@ -231,6 +234,9 @@ b_io_fd b_open (char * filename, int flags)
 		return -1;
 	}
 	//printf("Extent: %d,File: %d, Count: %d\n",pi->DEPointer->extentLocation, pi->DEPointer->location, fcbArray[returnFd].extentTable[0].count );
+	free(pi->DEPointer);
+	free(pi);
+	
 	return (returnFd);						// all set
 	
 	}
