@@ -652,10 +652,8 @@ int fs_move(char* src, char* dest){
     destPi->DEPointer = malloc(sizeof(dirEntry));
     
     srcPi = parsePath(src);
-    printf("1Here: %s, %d, %d\n", srcPi->path, srcPi->DEPointer->size, srcPi->DEPointer->location);
     destPi = parsePath(dest);
 
-    printf("2Here: %s, %d, %d\n", srcPi->path, srcPi->DEPointer->size, srcPi->DEPointer->location);
     if(srcPi->value < 0){
         printf("Source File doesn't exist\n");
         return -1;
@@ -702,7 +700,6 @@ int fs_move(char* src, char* dest){
     else
         destName = getLastPathElement(srcPi->path);
 
-    printf("3Here: %s, %d, %d\n", srcPi->path, srcPi->DEPointer->size, srcPi->DEPointer->location);
 
     strcpy(cwdEntries[fileIndex].name, destName);
     cwdEntries[fileIndex].dirType = 0;

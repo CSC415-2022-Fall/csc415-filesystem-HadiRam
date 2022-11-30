@@ -20,6 +20,18 @@ int getExtentTableSize(extent* extentTable){
     return size;
 }   
 
+void mergeNewRow(extent* extentTable){
+    int maxRow = getExtentTableSize(extentTable);
+    for(int i = 0; i < maxRow - 1; i++){
+        if(extentTable[i].location + extentTable[i].count == extentTable[maxRow -1].location){
+            extentTable[i].count += extentTable[maxRow -1].count;
+            extentTable[maxRow -1].location = -1;
+            extentTable[maxRow -1].count = -1;
+        }
+    }
+
+}
+
 extent* getExtentTable(int extentLocation){
     extent* extentTable = malloc(NUMBER_OF_EXTENT*sizeof(extent));
     LBAread(extentTable, EXTENT_BLOCK_SIZE, extentLocation);
@@ -52,6 +64,8 @@ int addToExtentTable(extent* extentTable, int location, int count){
         printf("out of row in the extent table\n");
         return -1;
     };
+
+    mergeNewRow(extentTable);
     return 0;
 }
 
@@ -134,6 +148,7 @@ void printExtentTable(extent* extentTable){
     }
 }
 
+
 // int main(){
 //     extent* ext = malloc(64*sizeof(extent));
 //     for(int i = 0; i < NUMBER_OF_EXTENT; i++){
@@ -141,13 +156,13 @@ void printExtentTable(extent* extentTable){
 //         ext[i].count = -1;
 //     }
 //     addToExtentTable(ext, 10, 6);
-//     addToExtentTable(ext, 26, 3);
+//     addToExtentTable(ext, 16, 3);
 //     addToExtentTable(ext, 104, 2);
-//     addToExtentTable(ext, 77, 8);
+//     addToExtentTable(ext, 106, 8);
 
 
 //     printExtentTable(ext);
-//     releaseFreeBlocksExtent(ext, 15);
+//     //releaseFreeBlocksExtent(ext, 15);
 //     printf("\n\n");
 //     printExtentTable(ext);
 //     return 0;
