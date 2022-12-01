@@ -258,9 +258,15 @@ fdDir * fs_opendir(const char *pathname){
         fd->dirEntryPosition = 0;
         fd->dirSize = (fd->dirPointer[0].size)/DE_STRUCT_SIZE;
         fd->fileIndex = 0;
+
+        free(pi->DEPointer);
+        free(pi);
+
         return fd;
     }else{
         //printf("1.Invalid path\n");
+        free(pi->DEPointer);
+        free(pi);
         return NULL;
     }
 }
@@ -342,7 +348,8 @@ int fs_setcwd(char *pathname)
         //setting cwdPath   
         strcpy(cwdPath,pi->path);
         
-        
+        free(pi->DEPointer);
+        free(pi);
         //success
         return 0;
     }
@@ -411,6 +418,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
                     }
                 }
                 LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+                free(tempDEntries);
             }
             i = 52;
         }
@@ -455,6 +463,10 @@ int fs_mkdir(const char *pathname, mode_t mode)
     LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 
     // return 0 on successful creation of new directory.
+    free(dirEntries);
+    free(pi->DEPointer);
+    free(pi);
+
     return 0;
 }
 
@@ -471,16 +483,22 @@ int fs_isFile(char * filename)
     if(pi->value >= 0)
     {
         if(pi->DEPointer->dirType == 0)
-        {           
+        {   
+            free(pi->DEPointer);
+            free(pi);      
             return 1;
         }
         else {
+            free(pi->DEPointer);
+            free(pi);
             return 0;
         }
     } else {
+        free(pi->DEPointer);
+        free(pi);
         return 0;
     }
-
+    
     
 }
 
@@ -496,16 +514,21 @@ int fs_isDir(char * pathname)
     if(pi->value >= 0)
     {
         if(pi->DEPointer->dirType == 1)
-        {           
+        {       
+            free(pi->DEPointer);
+            free(pi);    
             return 1;
         }
         else {
+            free(pi->DEPointer);
+            free(pi);
             return 0;
         }
     } else {
+        free(pi->DEPointer);
+        free(pi);
         return 0;
     }
-
 
 }
 
@@ -524,10 +547,12 @@ int fs_stat(const char *path, struct fs_stat *buf)
         buf->st_size = pi->DEPointer->size;
         buf->st_createtime = pi->DEPointer->created;
         buf->st_modtime = pi->DEPointer->lastModified;
-
+        free(pi->DEPointer);
+        free(pi);
         return 1; //success
     }
-
+    free(pi->DEPointer);
+    free(pi);
     return -1;   //on failure
 }
 
@@ -589,9 +614,15 @@ int fs_rmdir(const char *pathname){
             }
         }
         LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+        free(tempDEntries);
     }
     LBAwrite(tempEntries, DIRECTORY_BLOCKSIZE, tempEntries[0].location);
 
+    free(tempEntries);
+    free(parentPi->DEPointer);
+    free(parentPi);
+    free(pi->DEPointer);
+    free(pi);
     return 0;
 }
 
@@ -637,11 +668,15 @@ int fs_delete(char* filename){
             }
         }
         LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+        free(tempDEntries);
 
     }
     LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
     //Reload cwd
     LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
+
+    free(pi->DEPointer);
+    free(pi);
     return 0;
 
 };	
@@ -731,6 +766,7 @@ int fs_move(char* src, char* dest){
             }
         }
         LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+        free(tempDEntries);
         
     }
 
@@ -740,6 +776,7 @@ int fs_move(char* src, char* dest){
     fs_delete(srcPi->path);
     fs_setcwd(oldCwdPath);
     
+    free(oldCwdPath);
     free(srcPi->DEPointer);
     free(srcPi);
     free(destPi->DEPointer);

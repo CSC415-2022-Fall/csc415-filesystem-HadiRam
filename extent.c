@@ -47,6 +47,7 @@ void initExtentTable(int extentLocation){
         extentTable[i].count = -1;
     }
     LBAwrite(extentTable, EXTENT_BLOCK_SIZE, extentLocation);
+    free(extentTable);
 }
 
 int addToExtentTable(extent* extentTable, int location, int count){
@@ -155,10 +156,10 @@ void printExtentTable(extent* extentTable){
 //         ext[i].location = -1;
 //         ext[i].count = -1;
 //     }
-//     addToExtentTable(ext, 10, 6);
-//     addToExtentTable(ext, 16, 3);
+//     addToExtentTable(ext, 10, 4);
+//     addToExtentTable(ext, 20, 4);
 //     addToExtentTable(ext, 104, 2);
-//     addToExtentTable(ext, 106, 8);
+//     //addToExtentTable(ext, 106, 8);
 
 
 //     printExtentTable(ext);
