@@ -40,6 +40,7 @@ extern char * cwdPath;
 extern dirEntry * cwdEntries;
 
 void initGlobalVar();
+void freeGlobalVar();
 // This structure is returned by fs_readdir to provide the caller with information
 // about each file as it iterates through a directory
  struct fs_diriteminfo

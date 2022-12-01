@@ -147,5 +147,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 void exitFileSystem ()
 	{
 		free(vcb.freeSpaceBitMap);
+		freeGlobalVar();
 		printf ("System exiting\n");
 	}

@@ -34,6 +34,11 @@ void initGlobalVar(){
     
 }
 
+void freeGlobalVar(){
+    free(cwdEntries);
+    free(cwdPath);
+}
+
 //function that gets the last element within a path
 //example: pass in "/hadi/desktop/folder", returns "folder".
 //return NULL if path invalid
@@ -55,7 +60,6 @@ char * getParentDirectory(const char *pathname){
     if(pathname[0] == '/' && strlen(pathname) <= 1){
         char* path = malloc(sizeof(char)*2);
         strcpy(path, pathname);
-
         return path;
     }
 
@@ -99,7 +103,7 @@ pathInfo* parsePath(const char *pathname)
     char *delim = "/";
     char tempPath[256];
     tempPath[0] = '\0';
-    strcpy(tempPath, pathname);
+    strncpy(tempPath, pathname, strlen(pathname) + 1);
     
     dirEntry* tempDirEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
     char * DEBuffer = malloc(DIRECTORY_BLOCKSIZE*512);
@@ -165,6 +169,7 @@ pathInfo* parsePath(const char *pathname)
     }
 
     strcpy(result->path, absolutePath);
+    free(absolutePath);
     
     int exists = 0;
     int tokenCounter = 0;
@@ -353,7 +358,8 @@ int fs_setcwd(char *pathname)
         //success
         return 0;
     }
-    
+    free(pi->DEPointer);
+    free(pi);
     //if fails
     return -1;
 }
@@ -705,7 +711,7 @@ int fs_move(char* src, char* dest){
     int isDir = fs_isDir(destPi->path); 
     
 
-    char* oldCwdPath = malloc(strlen(cwdPath));
+    char* oldCwdPath = malloc(strlen(cwdPath)+1);
     strcpy(oldCwdPath, cwdPath);
     //Change the path to the destination directory
     if(isDir != 1){
