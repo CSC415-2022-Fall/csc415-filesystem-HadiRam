@@ -6,9 +6,9 @@
 * Group Name: File Explorers
 * Project: Basic File System
 *
-* File: b_io.c
+* File: extent.c
 *
-* Description: 
+* Description: Implementaion of the extent table.
 *
 **************************************************************/
 #include "extent.h"

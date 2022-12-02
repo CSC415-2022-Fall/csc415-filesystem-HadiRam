@@ -6,9 +6,9 @@
 * Group Name: File Explorers
 * Project: Basic File System
 *
-* File: b_io.c
+* File: vcb.h
 *
-* Description: 
+* Description: Interface for the Volume Control Block
 *
 **************************************************************/
 #ifndef VCB_H

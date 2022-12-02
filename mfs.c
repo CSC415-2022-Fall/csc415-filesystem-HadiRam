@@ -6,9 +6,10 @@
 * Group Name: File Explorers
 * Project: Basic File System
 *
-* File: b_io.c
+* File: mfs.c
 *
-* Description: 
+* Description: Implementation of directory operations like making,
+*               removing, changing, and opening directory.
 *
 **************************************************************/
 #include "mfs.h"

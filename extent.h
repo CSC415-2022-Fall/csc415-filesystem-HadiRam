@@ -6,9 +6,9 @@
 * Group Name: File Explorers
 * Project: Basic File System
 *
-* File: b_io.c
+* File: extent.h
 *
-* Description: 
+* Description: Interface for extent table.
 *
 **************************************************************/
 #ifndef EXTENT_H

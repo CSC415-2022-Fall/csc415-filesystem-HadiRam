@@ -6,9 +6,9 @@
 * Group Name: File Explorers
 * Project: Basic File System
 *
-* File: b_io.c
+* File: bitMap.c
 *
-* Description: 
+* Description: Holds the implementation of freespace of the volume.
 *
 **************************************************************/
 #include "bitMap.h"

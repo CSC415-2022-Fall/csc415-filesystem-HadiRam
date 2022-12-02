@@ -6,9 +6,9 @@
 * Group Name: File Explorers
 * Project: Basic File System
 *
-* File: b_io.c
+* File: bitMap.h
 *
-* Description: 
+* Description: Interface for bitMap
 *
 **************************************************************/
 #ifndef BITMAP_H

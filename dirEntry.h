@@ -6,9 +6,9 @@
 * Group Name: File Explorers
 * Project: Basic File System
 *
-* File: b_io.c
+* File: dirEntry.h
 *
-* Description: 
+* Description: Interface for the directory structure.
 *
 **************************************************************/
 #ifndef DIRENTRY_H
