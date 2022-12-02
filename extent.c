@@ -35,10 +35,14 @@ int getExtentTableSize(extent* extentTable){
 }   
 
 //helper function to add the element in the extent Table
+//merge checks if other rows are continuous with the new row
 void mergeNewRow(extent* extentTable){
     int maxRow = getExtentTableSize(extentTable);
+    //Iterating through the extent table
     for(int i = 0; i < maxRow - 1; i++){
+        //The 2 of the rows are continous 
         if(extentTable[i].location + extentTable[i].count == extentTable[maxRow -1].location){
+            //Merge the two rows 
             extentTable[i].count += extentTable[maxRow -1].count;
             extentTable[maxRow -1].location = -1;
             extentTable[maxRow -1].count = -1;
@@ -67,6 +71,7 @@ void initExtentTable(int extentLocation){
         extentTable[i].location = -1;
         extentTable[i].count = -1;
     }
+    //Write our new extent table to the location
     LBAwrite(extentTable, EXTENT_BLOCK_SIZE, extentLocation);
     free(extentTable);
 }
@@ -74,8 +79,11 @@ void initExtentTable(int extentLocation){
 //helper routine to add values in extent table
 int addToExtentTable(extent* extentTable, int location, int count){
     int flag = 0;
+    //Iterating through the extent table
     for(int i = 0; i < NUMBER_OF_EXTENT; i++){
-        if(extentTable[i].location == -1){  //found the free extent
+        //found the free extent
+        if(extentTable[i].location == -1){  
+            //Add to the extent table
             extentTable[i].location = location;
             extentTable[i].count = count;
             //exit loop
@@ -95,22 +103,29 @@ int addToExtentTable(extent* extentTable, int location, int count){
 }
 
 int getLBAFromFile(extent* extentTable, int location){
+    //Local variables to keep track
     int i = 0;
     int result;
-    int index = location;
+    int index = location;  
+    //If index at 0 its the start location of the file
     if(index == 0){
         return extentTable[0].location;
     }
     
+
     while( index > 0){
+        //Move through our extent table and subtracting count
         if(index > extentTable[i].count){
+            //Case: index is greater than count means it's not the i location
             index = index - extentTable[i].count;
             i++;
         }else if(index == extentTable[i].count){
+            //Case: index is equal meaning it's the next location
             i++;
             index = 0;
             result = extentTable[i].location;
         }else{
+            //Case: the file location is between the i location and its count
             result = extentTable[i].location + index;
             index = 0;
         }
@@ -134,27 +149,38 @@ void releaseFile(int extentLocation){
     updateBitMap(vcb.freeSpaceBitMap);
 }
 
+//This function release blocks that are no longer part of the files
+//This function will also update the vcb.bitMap
 void releaseFreeBlocksExtent(extent* extentTable, int location){
+    //Setting up variables to keep track
     int maxRow = getExtentTableSize(extentTable);
     int lbaPosition = getLBAFromFile(extentTable, location);
     int found = 0;
+    //iterating through the rows in the extent table
     for(int i = 0; i < maxRow; i++){
+        //found is true when we find which row the block we want to free is in
         if(found == 0){
             int maxCount = extentTable[i].location + extentTable[i].count;
+            //iterating through each count in a location
             for(int j = extentTable[i].location;j < maxCount; j++){
+                //Found is set to true
                 if(lbaPosition == j){
                     found = 1;
                     extentTable[i].count = j - extentTable[i].location;
+                    //Resetting the extent table
                     if(extentTable[i].count == 0){
+                        //remove the row from the extent table
                         extentTable[i].count = -1;
                         extentTable[i].location = -1;
                     }
+                    //Update the free space bitmap
                     releaseFreeSpace(vcb.freeSpaceBitMap, j, 1);
                 }else if(found == 1){
                     releaseFreeSpace(vcb.freeSpaceBitMap, j, 1);
                 }
             }
         }else{
+            //Removing the row from the extent table
             releaseFreeSpace(vcb.freeSpaceBitMap, extentTable[i].location, extentTable[i].count);
             extentTable[i].count = -1;
             extentTable[i].location = -1;
