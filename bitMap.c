@@ -17,6 +17,9 @@
 #include <stdlib.h>
 #include "fsLow.h"
 
+//helper routine to count the used space in freespace bitmap
+//  1 --> used
+//  0 --> free
 int bitCounter(unsigned char myByte){
     int x = 0;
     if((myByte & 0x80) == 0x80) x++;
@@ -54,10 +57,18 @@ unsigned char mask(int offset){
     }
 }
 
+//helper routine to count the free blocks in bitmap
+// 0--> free
+// 1--> used
 int freeSpaceCounter(unsigned char myByte){
     return 8 - bitCounter(myByte); // gives you the remaining number of free blocks in a byte
 };
 
+/**
+ * Helper Routine
+ * Takes bitmap and the position to be set to used
+ * sets the position to 1 
+*/
 void setABit(unsigned char *bitMap, int offset){
     /*
     setBit(1101 1001, 2) -> 1111 1001
@@ -67,8 +78,12 @@ void setABit(unsigned char *bitMap, int offset){
     bitMap[byteIndex] = (bitMap[byteIndex] | tempByte);
 }
 
+
+/**
+ * Helper routine to change the bit in the bitmap to 0
+*/
 void clearABit(unsigned char *bitMap, int offset){
-    int byteIndex = offset/8;
+    int byteIndex = offset/8;   // 1 byte = 8 bits
     unsigned char tempByte = mask((offset % 8));
     tempByte = ~tempByte;
     bitMap[byteIndex] = (bitMap[byteIndex] & tempByte);
@@ -84,6 +99,12 @@ int checkABit(unsigned char myByte, int offset){
 }
 
 
+/**
+ * Helper routine 
+ * takes bitmap, size of bitmap and desired number of blocks
+ * On Success: returns index to the first free block
+ * On failure: returns -1
+*/
 int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
     int firstFreeBlock;
     int firstFreeByte;
@@ -128,7 +149,8 @@ int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks){
 
     return firstFreeBlock;
 }
-
+//helper routine to release the block in bitmap
+//sets the bits to 0 at specified location in bitmap
 int releaseFreeSpace(unsigned char* bitMap, int location, int size){
     
     for(int i = location; i < location+size; i++){
@@ -137,7 +159,7 @@ int releaseFreeSpace(unsigned char* bitMap, int location, int size){
     }
     return 0;
 }
-
+//helper routine to write the freespace in the disk
 void updateBitMap(unsigned char* bitMap){
 	LBAwrite(bitMap, BITMAP_SIZE, BITMAP_LOCATION);
 }

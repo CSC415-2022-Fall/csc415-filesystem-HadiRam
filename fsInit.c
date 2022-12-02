@@ -35,6 +35,10 @@
 VCB vcb;
 
 //Helper Function
+/**
+ * Takes a pointer to bitMap(freespace) and size of a block
+ * initializes bitMap in the volume
+*/
 void initBitMap(char* bitMapPointer, u_int64_t blockSize){
     unsigned char tempByte = 0xFC;
 	//1111 1100 Represent the first 6 blocks used by VCB and the Bitmap itself
@@ -143,10 +147,10 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	return 0;
 	}
 	
-	
+//exit file system	
 void exitFileSystem ()
 	{
-		free(vcb.freeSpaceBitMap);
+		free(vcb.freeSpaceBitMap); //free the memory
 		freeGlobalVar();
 		printf ("System exiting\n");
 	}
