@@ -375,7 +375,7 @@ int cmd_mv (int argcnt, char *argvec[])
 		
 	char * src = argvec[1];	
 	char * dest = argvec[2];
-	
+	//Call fs_move to move the file to another directory/file
 	if(fs_move(src, dest) == 0){
 		printf("moved success\n");
 	}else{

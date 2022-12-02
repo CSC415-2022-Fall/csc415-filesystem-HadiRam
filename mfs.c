@@ -32,7 +32,7 @@ dirEntry* cwdEntries;
 
 //Helper Functions
 
-
+//Load the directory in the directory entries from disk
 void loadDirEntries(dirEntry* DEArray, int location){
     LBAread(DEArray, DIRECTORY_BLOCKSIZE, location);
 }
@@ -171,32 +171,33 @@ pathInfo* parsePath(const char *pathname)
     }
     pathTokens[tokenIndex] = NULL;
     
+    //Use the tokenized strings to make a simplified path
     char* absolutePath = malloc(64);
     absolutePath[0] = '\0';
     for(int i = 0; i < tokenIndex; i++){
         if(strcmp(pathTokens[0], ".") == 0){
             strcat(absolutePath, delim);
         }else{
+            //Append the "/" and the next token
             strcat(absolutePath, delim);
             strcat(absolutePath, pathTokens[i]);
         }
     }
-
+    //Copy path to result
     strcpy(result->path, absolutePath);
     free(absolutePath);
     
+    //Local tracking variables
+    //Check if the directory entry exists
     int exists = 0;
     int tokenCounter = 0;
-    // for(int i = 0; i < tokenIndex; i++){
-    //     printf("Path:%s\n", pathTokens[i]);
-    // }
-    
+
    
     while(pathTokens[tokenCounter] != NULL){
         //check if dir is free and the name matches the element within the path.
         //if both are true, initialize the entryIndex, and make exists = 1.
         for(int i = 0; i < MAX_DIRENT_SIZE; i++){
-            
+            //loop through the directory entries to look for matching directory entry
             if(tempDirEntries[i].dirType != -1
              && strcmp(tempDirEntries[i].name, pathTokens[tokenCounter]) == 0){
                 exists = 1;
@@ -230,7 +231,7 @@ pathInfo* parsePath(const char *pathname)
             }else{
                 
                 //Found the file/directory and return the DE index of Dir[n-1]
-               
+               //Copy the Directory entry into my result Directory entry
                 strcpy(result->DEPointer->name, tempDirEntries[entryIndex].name);
                 result->DEPointer->created = tempDirEntries[entryIndex].created;
                 result->DEPointer->size = tempDirEntries[entryIndex].size;
@@ -245,12 +246,12 @@ pathInfo* parsePath(const char *pathname)
 
     }
     
+    //Free all malloc
     free(tempDirEntries);
     free(DEBuffer);
 
     result->value = entryIndex;
-    
-    //printf("Mypath: %s\n", result->path);
+  
     return result;
 
 }
@@ -424,7 +425,8 @@ int fs_mkdir(const char *pathname, mode_t mode)
     {
         // if the dir is free, begin creating the new directory.
         if (cwdEntries[i].dirType == -1)
-        {
+        {   
+            //Initializing the directory entry of a new directory
             indexOfNewDirEntry = i;
             strcpy(cwdEntries[i].name, lastElementOfPath);
             cwdEntries[i].dirType = 1;
@@ -439,20 +441,25 @@ int fs_mkdir(const char *pathname, mode_t mode)
             if(cwdEntries[0].location == cwdEntries[1].location){
                 cwdEntries[1].size += DE_STRUCT_SIZE;
             }else{
+                //Update the parent directory by loading the parent directory from disk
                 char* parentDir = getLastPathElement(cwdPath);
                 dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
                 LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+                //Locate the new directory's name inside the parent directory
                 for(int i = 0; i < MAX_DIRENT_SIZE; i++){
                     if(strcmp(parentDir, tempDEntries[i].name) == 0){
+                        //Update the size
                         tempDEntries[i].size += DE_STRUCT_SIZE;
                         //Exit loop
                         i = MAX_DIRENT_SIZE;
                     }
                 }
+                //Write back to disk
                 LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
                 free(tempDEntries);
             }
-            i = 52;
+            //Exit loop
+            i = numOfDirEntries;
         }
     }
     
@@ -460,7 +467,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
     // Parse path on passed path, to get the directry entry of the new directroy.
     dirEntry *dirEntries = malloc(MAX_DIRENT_SIZE * DE_STRUCT_SIZE);
     loadDirEntries(dirEntries, cwdEntries[indexOfNewDirEntry].location);
-
+    //Initializing all the directory entries inside our new directory
     for (int i = 0; i < numOfDirEntries; i++)
     {
         dirEntries[i].name[0] = '\0';
@@ -511,9 +518,11 @@ int fs_isFile(char * filename)
     pathInfo* pi = malloc(sizeof(pathInfo));
     pi->DEPointer = malloc(sizeof(dirEntry));
     pi = parsePath(filename);
-
+    //Check if the value from parsePath is greater or equal 0
+    //Meaning our file exists
     if(pi->value >= 0)
-    {
+    {   
+        //dirType 0 meaning its a file
         if(pi->DEPointer->dirType == 0)
         {   
             free(pi->DEPointer);
@@ -539,12 +548,14 @@ int fs_isFile(char * filename)
 //return 1 if directory, 0 otherwise
 int fs_isDir(char * pathname)
 {   
+    //Parsepath for return value
     pathInfo* pi = malloc(sizeof(pathInfo));
     pi->DEPointer = malloc(sizeof(dirEntry));
     pi = parsePath(pathname);
 
     if(pi->value >= 0)
-    {
+    {   
+        //dirType == 1 meaning its a directory
         if(pi->DEPointer->dirType == 1)
         {       
             free(pi->DEPointer);
@@ -584,6 +595,7 @@ int fs_stat(const char *path, struct fs_stat *buf)
         free(pi);
         return 1; //success
     }
+    //Free malloc
     free(pi->DEPointer);
     free(pi);
     return -1;   //on failure
@@ -641,11 +653,14 @@ int fs_rmdir(const char *pathname){
     if(tempEntries[0].location == tempEntries[1].location){
         tempEntries[1].size -= DE_STRUCT_SIZE;
     }else{
+        //Update the parent directory 
         char* parentDir = getLastPathElement(cwdPath);
         dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
         LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+        //Check for a matching name in the parent directory
         for(int i = 0; i < MAX_DIRENT_SIZE; i++){
             if(strcmp(parentDir, tempDEntries[i].name) == 0){
+                //Update the directory entry size
                 tempDEntries[i].size -= DE_STRUCT_SIZE;
                 //Exit loop
                 i = MAX_DIRENT_SIZE;
@@ -703,17 +718,21 @@ int fs_delete(char* filename){
     if(cwdEntries[0].location == cwdEntries[1].location){
         cwdEntries[1].size -= DE_STRUCT_SIZE;
     }else{
-        //printf("Not supposed to be here!\n");
+        //Update the parent directory
         char* parentDir = getLastPathElement(cwdPath);
         dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
 		LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+        //Iterate through the parent directory
         for(int i = 0; i < MAX_DIRENT_SIZE; i++){
+            //Check for a matching name in the parent directory
             if(strcmp(parentDir, tempDEntries[i].name) == 0){
+                //update the size in the directory entry
                 tempDEntries[i].size -= DE_STRUCT_SIZE;
                 //Exit loop
                 i = MAX_DIRENT_SIZE;
             }
         }
+        //Write it back to disk
         LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
         free(tempDEntries);
 
@@ -771,7 +790,9 @@ int fs_move(char* src, char* dest){
     }
 
     int fileIndex;
+    //Check the the file doesn't exist but the directory exists
     if(destPi->value == -1 || isDir == 1){
+        //Find a free directory entry
         for(int i = 0; i < MAX_DIRENT_SIZE; i++){
             if(cwdEntries[i].dirType == -1){
                 fileIndex = i;
@@ -780,18 +801,19 @@ int fs_move(char* src, char* dest){
             }
         }
     }else{
+        //If the file already exist, we just set it the value return by parsePath
         fileIndex = destPi->value;
     }
     
    
     char* destName;
-
+    //Setting the name of the new file
     if(isDir != 1)
         destName = getLastPathElement(destPi->path);
     else
         destName = getLastPathElement(srcPi->path);
 
-
+    //Copying the src directory entry to the destination directory entries
     strcpy(cwdEntries[fileIndex].name, destName);
     cwdEntries[fileIndex].dirType = 0;
     cwdEntries[fileIndex].location = srcPi->DEPointer->location;
@@ -799,7 +821,7 @@ int fs_move(char* src, char* dest){
     time(&cwdEntries[fileIndex].lastModified);
     cwdEntries[fileIndex].size = srcPi->DEPointer->size;
     cwdEntries[fileIndex].extentLocation = srcPi->DEPointer->extentLocation;
-
+    //Updating the directory size
     cwdEntries[0].size +=  DE_STRUCT_SIZE;
 
     
@@ -813,24 +835,30 @@ int fs_move(char* src, char* dest){
         char* parentDir = getLastPathElement(cwdPath);
         dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
 		LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
+        //Iterating through the directory to find matching name
         for(int i = 0; i < MAX_DIRENT_SIZE; i++){
             if(strcmp(parentDir, tempDEntries[i].name) == 0){
+                //Update the size of the file DE in the parent directory
                 tempDEntries[i].size += DE_STRUCT_SIZE;
                 //Exit loop
                 i = MAX_DIRENT_SIZE;
             }
         }
+        //Write back to disk
         LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
         free(tempDEntries);
         
     }
 
     char* parentDirSrc = getParentDirectory(srcPi->path);
-    
+    //Set the path the src file destination
     fs_setcwd(parentDirSrc);  
+    //Delete the src file
     fs_delete(srcPi->path);
+    //Set the path back to the original path
     fs_setcwd(oldCwdPath);
     
+    //Free all the allocated memories
     free(oldCwdPath);
     free(srcPi->DEPointer);
     free(srcPi);
