@@ -34,10 +34,10 @@ typedef u_int32_t uint32_t;
 #endif
 
 
-//Global variable for working directory
+//Global variables
 
-extern char * cwdPath;
-extern dirEntry * cwdEntries;
+extern char * cwdPath; //holds the current working dir path
+extern dirEntry * cwdEntries;	//holds the current working directory info
 
 void initGlobalVar();
 void freeGlobalVar();

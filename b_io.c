@@ -1,5 +1,5 @@
 /**************************************************************
-* Class:  CSC-415-0# Fall 2021
+* Class:  CSC-415-01 Fall 2022
 * Names: 
 * Student IDs:
 * GitHub Name:
@@ -31,8 +31,8 @@
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
-#define INIT_FILE_SIZE 10
-#define ADDITIONAL_FILE_BLOCK 50
+#define INIT_FILE_SIZE 10	//when creating a file
+#define ADDITIONAL_FILE_BLOCK 50	//when a file needs more space
 
 typedef struct b_fcb
 	{
@@ -102,16 +102,18 @@ b_io_fd b_open (char * filename, int flags)
 	{
 		return -1;
 	}
-	
+	//parsing the path
 	pathInfo* pi = malloc(sizeof(pathInfo));
 	pi->DEPointer = malloc(sizeof(dirEntry));
 	pi = parsePath(filename);
 
+	//validating the path
 	if(pi->value == -2){
 		printf("Path is invalid\n");
 		return -1;
 	}
 	
+	//if flags is O_CREAT and path is correct but file doesn't exists
 	if(flags & O_CREAT == O_CREAT && pi->value == -1){
 
 		//Find free directory Entry inside parent directory
@@ -121,7 +123,7 @@ b_io_fd b_open (char * filename, int flags)
 				index = i;
 			}
 		}
-		
+		//checking if directory is full
 		if(index == -1){
 			printf("Directory is full\n");
 			return -1;
@@ -141,7 +143,7 @@ b_io_fd b_open (char * filename, int flags)
 			printf("No more free space\n");
 			return -1;
 		}
-	
+		//update the current working Directory
 		cwdEntries[index].location = fileFreeSpace;
 		cwdEntries[index].size = 0;
 		time(&cwdEntries[index].created);
@@ -196,8 +198,9 @@ b_io_fd b_open (char * filename, int flags)
 
 	}
 	
-
+	//path exists and file also exists.
 	if(pi->value >= 0){
+		//initializing the variables in fcb struct array
 		fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
 		fcbArray[returnFd].buf[0] ='\0';
 		fcbArray[returnFd].index = 0;
@@ -212,9 +215,10 @@ b_io_fd b_open (char * filename, int flags)
 		fcbArray[returnFd].extentTable = getExtentTable(pi->DEPointer->extentLocation);
 		fcbArray[returnFd].extentLocation = pi->DEPointer->extentLocation;
 		
+		//checking if the flag is O_TRUNC
 		if((flags & O_TRUNC) == O_TRUNC){
 			if((flags & O_WRONLY) == O_WRONLY || (flags & O_RDWR) == O_RDWR){
-				//TODO empty the file
+				//empty the file
 				cwdEntries[pi->value].size = 0;
 				fcbArray[returnFd].fileSize = 0;
 				
@@ -223,7 +227,7 @@ b_io_fd b_open (char * filename, int flags)
 				return -1;
 			}	
 		}
-
+		//update the current working Directory
 		time(&cwdEntries[pi->value].lastModified);
 		LBAwrite(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);	
 		//Reload cwd
@@ -234,6 +238,7 @@ b_io_fd b_open (char * filename, int flags)
 		return -1;
 	}
 	//printf("Extent: %d,File: %d, Count: %d\n",pi->DEPointer->extentLocation, pi->DEPointer->location, fcbArray[returnFd].extentTable[0].count );
+	//free the memory used 
 	free(pi->DEPointer);
 	free(pi);
 	
@@ -254,16 +259,17 @@ int b_seek (b_io_fd fd, off_t offset, int whence)
 		}
 	
 	if(whence & SEEK_SET == SEEK_SET){
-		fcbArray[fd].fileOffset = offset;
+		fcbArray[fd].fileOffset = offset; //setting the file offset to the given offset
 	}else if((whence & SEEK_CUR) == SEEK_CUR){
-		fcbArray[fd].fileOffset += offset;
+		fcbArray[fd].fileOffset += offset;	//The file offset is set to its current location plus offset
 	}else if(whence & SEEK_END == SEEK_END){
+		//The file offset is set to the size of the file plus offset bytes.
 		fcbArray[fd].fileOffset += fcbArray[fd].fileOffset + offset;
 	}else{
 		printf("Invalid SEEK flags\n");
 	}
 		
-	return fcbArray[fd].fileOffset; //Change this
+	return fcbArray[fd].fileOffset; 
 	}
 
 
@@ -279,7 +285,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		return (-1); 					//invalid file descriptor
 		}
 	
-
+	//local variables to help tracking
 	int neededBytes = count;
 	int callerBufferOffset = 0;
 
@@ -290,24 +296,28 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		return -1; 
 	}
 
-	
+	//remaining bytes in the file
 	int remainingBytes = fcbArray[fd].fileBlocks*B_CHUNK_SIZE - fcbArray[fd].fileSize;
 	//Check if we need more blocks
 	if(count > remainingBytes){
+		//get more space using helper routing getConsecFreeSpace
 		int newFileLocation = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, ADDITIONAL_FILE_BLOCK);
+		//check if there is enough space in disk
 		if(newFileLocation == -1){
 			printf("Disk is full\n");
 			return -1;
 		}
+		//update the free space map
 		updateBitMap(vcb.freeSpaceBitMap);
-		fcbArray[fd].fileBlocks += ADDITIONAL_FILE_BLOCK;
-		int result = addToExtentTable(fcbArray[fd].extentTable, newFileLocation, ADDITIONAL_FILE_BLOCK);
+		fcbArray[fd].fileBlocks += ADDITIONAL_FILE_BLOCK;	//update the file size
+		int result = addToExtentTable(fcbArray[fd].extentTable, newFileLocation, ADDITIONAL_FILE_BLOCK);	//update extent table
+		//check if extent table is full
 		if(result == -1){
 			printf("Out of Extent\n");
 			return -1;
 		}
 	}
-
+	//start writing
 	while(neededBytes > 0){
 		remainingBytes = B_CHUNK_SIZE - fcbArray[fd].index;
 
@@ -364,11 +374,12 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	//Update CWD
 	LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 	
+	//freeing the memory; safety first
 	free(tempDEntries);
 	tempDEntries = NULL;
 	
 	
-	return callerBufferOffset; //Change this
+	return callerBufferOffset; 
 	}
 
 
