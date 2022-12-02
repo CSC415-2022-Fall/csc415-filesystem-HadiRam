@@ -637,6 +637,8 @@ int fs_rmdir(const char *pathname){
         free(tempDEntries);
     }
     LBAwrite(tempEntries, DIRECTORY_BLOCKSIZE, tempEntries[0].location);
+    //Reload Dir
+    LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 
     free(tempEntries);
     free(parentPi->DEPointer);
