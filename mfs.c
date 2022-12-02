@@ -36,7 +36,7 @@ dirEntry* cwdEntries;
 void loadDirEntries(dirEntry* DEArray, int location){
     LBAread(DEArray, DIRECTORY_BLOCKSIZE, location);
 }
-
+//helper routine to initialize cwdPath and cwdEntries
 void initGlobalVar(){
     cwdPath = malloc(256);
     strcpy(cwdPath, "/");
@@ -47,7 +47,7 @@ void initGlobalVar(){
     memcpy(cwdEntries, DEBuffer, MAX_DIRENT_SIZE*DE_STRUCT_SIZE);
     
 }
-
+//helper routine to free memory occupied by global variables
 void freeGlobalVar(){
     free(cwdEntries);
     free(cwdPath);
@@ -256,12 +256,17 @@ pathInfo* parsePath(const char *pathname)
 }
 
 
-
+// open directory function that takes pathname and returns the directory descriptor struct
 fdDir * fs_opendir(const char *pathname){
+
+    //first thing first, parse the path
+    //parse path returns a struct Path Info
+
     pathInfo* pi = malloc(sizeof(pathInfo));
     pi->DEPointer = malloc(sizeof(dirEntry));
     pi = parsePath(pathname);
 
+    //if the path is valid but checking if its actually a directory
     if(pi->value >= 0){
         if(pi->DEPointer->dirType != 1){
             printf("Not a directory\n");
@@ -269,6 +274,7 @@ fdDir * fs_opendir(const char *pathname){
         }
         fdDir* fd = malloc(sizeof(fdDir));
 
+        //initializing the fd struct elements once the dir is open
         fd->dirPointer = malloc(MAX_DIRENT_SIZE*DE_STRUCT_SIZE);
         //printf("Location:%d, size:%d\n", pi->DEPointer->location, pi->DEPointer->size);
         loadDirEntries(fd->dirPointer, pi->DEPointer->location);
@@ -278,10 +284,11 @@ fdDir * fs_opendir(const char *pathname){
         fd->dirSize = (fd->dirPointer[0].size)/DE_STRUCT_SIZE;
         fd->fileIndex = 0;
 
+        //safety first
         free(pi->DEPointer);
         free(pi);
 
-        return fd;
+        return fd;  //return the directory descriptor
     }else{
         //printf("1.Invalid path\n");
         free(pi->DEPointer);
@@ -290,18 +297,22 @@ fdDir * fs_opendir(const char *pathname){
     }
 }
 
+
+//----------------------fs_readDir------------------------------
+
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
+    //mallocing the return struct
     struct fs_diriteminfo* ii = malloc(sizeof(struct fs_diriteminfo));
     int exist = 0;
 
     if(dirp->fileIndex == dirp->dirSize){
         return NULL;
     }
+    //looping through each element
     for(int i = dirp->dirEntryPosition; i < MAX_DIRENT_SIZE; i++){
         if(dirp->dirPointer[i].dirType == 0 || dirp->dirPointer[i].dirType == 1){
             strcpy(ii->d_name, dirp->dirPointer[i].name);
-            //DEBUG
-            //printf("%s and %d\n",dirp->dirPointer[i].name,dirp->dirPointer[i].location);
+            //initializing the elements in return struct
             ii->d_reclen = (int) sizeof(struct fs_diriteminfo);
             if(dirp->dirPointer[i].dirType == 1){
                 ii->fileType = '1';
@@ -323,19 +334,20 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
 
     return ii;
 }
-
+//--------------------fs_closedir-------------------
 int fs_closedir(fdDir *dirp){
+    //cleanup
     free(dirp->dirPointer);
     free(dirp);
     dirp = NULL;
 }
 
-// beginings of getcwd
+//----------------fs_getcwd-----------------------------
 char *fs_getcwd(char *pathname, size_t size)
 {
     //buffer is pathname, size is size
     
-    strncpy(pathname,cwdPath,size);
+    strncpy(pathname,cwdPath,size);//just copy the pathname from cwdPath
     return pathname;
 }
 
@@ -360,7 +372,7 @@ int fs_setcwd(char *pathname)
             return -1;
         }
         //setting cwdEntries
-        //lba read into buffer, dirEntry.location.
+        
         
         loadDirEntries(cwdEntries, pi->DEPointer->location);
         
@@ -563,6 +575,7 @@ int fs_stat(const char *path, struct fs_stat *buf)
     
     //path is valid
     if (pi->value >= 0){
+        //setting the values in the struct fs_stat *buf
         buf->st_accesstime = pi->DEPointer->lastModified;
         buf->st_size = pi->DEPointer->size;
         buf->st_createtime = pi->DEPointer->created;
@@ -576,13 +589,15 @@ int fs_stat(const char *path, struct fs_stat *buf)
     return -1;   //on failure
 }
 
-
+//--------------------fs_rmdir---------------------------------
 int fs_rmdir(const char *pathname){
+    //if the path is itself or root
     if(pathname[0] == '.'){
         printf("Directory cannot be removed\n");
         return -1;
     }
-    int isEmpty = 0;
+    int isEmpty = 0; //flag to check if directory is empty
+    //parse path
     pathInfo* pi = malloc(sizeof(pathInfo));
     pi->DEPointer = malloc(sizeof(dirEntry));
     pi = parsePath(pathname);
@@ -590,22 +605,24 @@ int fs_rmdir(const char *pathname){
         printf("Is not a directory\n");
         return -1;
     }
-    //printf("TEST: %s, %d, %d\n",pi->path, pi->DEPointer->size, DE_STRUCT_SIZE*2);
+    
     if(pi->DEPointer->size != DE_STRUCT_SIZE*2){
         isEmpty = 1;
     }
-
+    //can't remove a non empty directory
     if(isEmpty == 1){
         printf("Directory is not empty!\n");
         return -1;
     }
-
+    //get parent path using helper routine
     char* parentPath = getParentDirectory(pi->path);
 
+    //parse the parentpath
     pathInfo* parentPi = malloc(sizeof(pathInfo));
     parentPi->DEPointer = malloc(sizeof(dirEntry));
 
     parentPi = parsePath(parentPath);
+    //create a temp directory entry to load the info about parent dir
     dirEntry* tempEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
     loadDirEntries(tempEntries, parentPi->DEPointer->location);
 
@@ -617,6 +634,7 @@ int fs_rmdir(const char *pathname){
     tempEntries[pi->value].size = 0;
     tempEntries[pi->value].extentLocation = -1;
 
+    //update it on bitmap
     updateBitMap(vcb.freeSpaceBitMap);
     tempEntries[0].size -= DE_STRUCT_SIZE;
     //Update .. if its the root directory
@@ -633,22 +651,29 @@ int fs_rmdir(const char *pathname){
                 i = MAX_DIRENT_SIZE;
             }
         }
+        //write to disk
         LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, cwdEntries[1].location);
         free(tempDEntries);
     }
+    //write to disk
     LBAwrite(tempEntries, DIRECTORY_BLOCKSIZE, tempEntries[0].location);
     //Reload Dir
     LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 
+    //cleanup
     free(tempEntries);
     free(parentPi->DEPointer);
     free(parentPi);
     free(pi->DEPointer);
     free(pi);
-    return 0;
+    return 0;   //success
 }
 
+//--------------------fs_delete------------------------
+
 int fs_delete(char* filename){
+
+    //parse path
     pathInfo* pi = malloc(sizeof(pathInfo));
     pi->DEPointer = malloc(sizeof(dirEntry));
     pi = parsePath(filename);
@@ -703,15 +728,23 @@ int fs_delete(char* filename){
 
 };	
 
+
+//----------------------------fs_move--------------------
+//Helper routine to implement mv command in fsshell.c
+
 int fs_move(char* src, char* dest){
+    //parse path of both src and destination
+
     pathInfo* srcPi = malloc(sizeof(pathInfo));
     srcPi->DEPointer = malloc(sizeof(dirEntry));
     pathInfo* destPi = malloc(sizeof(pathInfo));
     destPi->DEPointer = malloc(sizeof(dirEntry));
     
-    srcPi = parsePath(src);
-    destPi = parsePath(dest);
+    srcPi = parsePath(src); //parsed info of source path
+    destPi = parsePath(dest);   //parsed info of destination path
 
+
+    //validating
     if(srcPi->value < 0){
         printf("Source File doesn't exist\n");
         return -1;
