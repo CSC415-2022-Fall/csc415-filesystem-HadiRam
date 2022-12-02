@@ -164,23 +164,3 @@ void updateBitMap(unsigned char* bitMap){
 	LBAwrite(bitMap, BITMAP_SIZE, BITMAP_LOCATION);
 }
 
-// int main(){
-//     printf("Hello \n");
-//     unsigned char tempByte = 0x02;
-//     unsigned char* bitMap = malloc(5);
-
-//     bitMap[0] = 0xFC;
-//     for(int i = 1; i<5; i++){
-//         bitMap[i] = 0x00;
-//     }
-//     bitMap[2] = 0xFF;
-
-//     //1111 1100 0000 0000 1111 1111 0000 0000 0000 0000
-
-//     //printf("%d\n", freeSpaceCounter(tempByte));
-//     //0010 0010
-//     // clearABit(&tempByte, 6);
-//     // clearABit(&tempByte, 2);
-//     printf("%d\n", getConsecFreeSpace(bitMap, 5, 6));
-//     return 0;
-// }
