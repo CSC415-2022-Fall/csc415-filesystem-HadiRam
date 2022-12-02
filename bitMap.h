@@ -14,8 +14,8 @@
 #ifndef BITMAP_H
 #define BITMAP_H
 
-#define BITMAP_SIZE 5
-#define BITMAP_LOCATION 1
+#define BITMAP_SIZE 5   //size of bitMap in VCB is 5 blocks
+#define BITMAP_LOCATION 1 // location in VCB is at index 1
 // int bitCounter(unsigned char myByte);
 // unsigned char mask(int offset);
 // int freeSpaceCounter(unsigned char myByte);
@@ -26,8 +26,8 @@
 // void clearABit(unsigned char* bitMap, int offset);
 
 
-int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks);
-int releaseFreeSpace(unsigned char* bitMap, int location, int size);
-void updateBitMap(unsigned char* bitMap);
+int getConsecFreeSpace(unsigned char* bitMap, int bitMapSize, int numOfBlocks); //get contiguous free space in disk
+int releaseFreeSpace(unsigned char* bitMap, int location, int size);    //freeing the space in disk
+void updateBitMap(unsigned char* bitMap);   //write back to disk.
 
 #endif
