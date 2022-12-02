@@ -319,19 +319,22 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	}
 	//start writing
 	while(neededBytes > 0){
+		//Reculating the number of bytes we have left in our buffer
 		remainingBytes = B_CHUNK_SIZE - fcbArray[fd].index;
-
+		
+		//Check to see if we have left over space in the buffer to write to
 		if(remainingBytes > 0){
-			
+			//Get the current block position of the buffer
 			int currentBlock = fcbArray[fd].fileOffset/B_CHUNK_SIZE; 
 			int lbaPosition = getLBAFromFile(fcbArray[fd].extentTable, currentBlock);
+			//Setting how much we need to write
 			int copyAmount = neededBytes;
 			if(neededBytes >= remainingBytes){
 				copyAmount = remainingBytes;
 			}
+			//Load the buffer block in, write to it, and write it back to disk
 			LBAread(fcbArray[fd].buf, 1, lbaPosition);
 			memcpy(fcbArray[fd].buf + fcbArray[fd].index, buffer + callerBufferOffset, copyAmount);
-
 			LBAwrite(fcbArray[fd].buf, 1, lbaPosition);
 			//Update variables
 			fcbArray[fd].fileOffset += copyAmount;
@@ -339,18 +342,20 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			fcbArray[fd].fileSize += copyAmount;
 			neededBytes -= copyAmount;
 			callerBufferOffset += copyAmount;
-			//printf("1. %d, %d, %d\n", callerBufferOffset, fcbArray[fd].index, currentBlock);
+			
 			
 		}else{
-			
+			//We're in a new block starting from position 0
 			int currentBlock = fcbArray[fd].fileOffset/B_CHUNK_SIZE;
 			int lbaPosition = getLBAFromFile(fcbArray[fd].extentTable, currentBlock);
+			//Setting how much we need to write
 			int copyAmount = 0;
 			if(neededBytes >= B_CHUNK_SIZE){
 				copyAmount = B_CHUNK_SIZE;
 			}else{
 				copyAmount = neededBytes;
 			}
+			//write to the buffer block, and write it back to disk
 			memcpy(fcbArray[fd].buf + fcbArray[fd].index, buffer + callerBufferOffset, copyAmount);
 			LBAwrite(fcbArray[fd].buf, 1, lbaPosition);
 			//Update variables
@@ -359,19 +364,20 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			fcbArray[fd].fileSize += copyAmount;
 			neededBytes -= copyAmount;
 			callerBufferOffset += copyAmount;
-			//printf("2. %d, %d\n", callerBufferOffset, currentBlock);
 		}
 	}
 
-
+	//Load the directory entries from disk
 	dirEntry* tempDEntries = malloc(MAX_DIRENT_SIZE*sizeof(dirEntry));
 	LBAread(tempDEntries, DIRECTORY_BLOCKSIZE, fcbArray[fd].directoryLocation);
+	//Update the size based on how much we write
 	tempDEntries[fcbArray[fd].positionInDE].size += callerBufferOffset;
+	//Update the extent table
 	updateExtentTable(fcbArray[fd].extentTable,
 		tempDEntries[fcbArray[fd].positionInDE].extentLocation);
-
+	//Write back to disk
 	LBAwrite(tempDEntries, DIRECTORY_BLOCKSIZE, fcbArray[fd].directoryLocation);
-	//Update CWD
+	//Reload the CWD from disk
 	LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
 	
 	//freeing the memory; safety first
