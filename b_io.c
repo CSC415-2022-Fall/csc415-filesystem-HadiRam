@@ -43,12 +43,12 @@ typedef struct b_fcb
 	//ADDED
 	int fileOffset;   //holds the index tracking the whole file
 	int fileSize;	//holds the actual file size
-	int fileBlocks;
+	int fileBlocks;	//holds how many blocks in total we allocate to the file
 	int flag; 		//holds the permission of the file
-	int directoryLocation;
-	int positionInDE;
+	int directoryLocation;	//holds the parent directory location
+	int positionInDE;	//holds the position of the file inside its parent directory
 	extent* extentTable; //holds the extent table of the file
-	int extentLocation;
+	int extentLocation;	//holds the location of the extent table of the file
 
 	} b_fcb;
 	
@@ -135,7 +135,7 @@ b_io_fd b_open (char * filename, int flags)
 		//Finding the free space
 		cwdEntries[index].extentLocation = 
 			getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, EXTENT_BLOCK_SIZE);
-
+		//Initializing the extent table with our free space
 		initExtentTable(cwdEntries[index].extentLocation);
 		int fileFreeSpace = getConsecFreeSpace(vcb.freeSpaceBitMap, vcb.bitMapByteSize, INIT_FILE_SIZE);
 		
@@ -193,7 +193,7 @@ b_io_fd b_open (char * filename, int flags)
 		fcbArray[returnFd].positionInDE = index;
 		fcbArray[returnFd].extentTable = extentTable;
 		fcbArray[returnFd].extentLocation = cwdEntries[index].extentLocation;
-		//printf("Extent: %d,File: %d, fileSize: %d\n",cwdEntries[index].extentLocation, cwdEntries[index].location, fcbArray[returnFd].fileSize);
+		
 		return returnFd;
 
 	}
@@ -237,7 +237,7 @@ b_io_fd b_open (char * filename, int flags)
 		printf("Error opening file! File does not exist!\n");
 		return -1;
 	}
-	//printf("Extent: %d,File: %d, Count: %d\n",pi->DEPointer->extentLocation, pi->DEPointer->location, fcbArray[returnFd].extentTable[0].count );
+	
 	//free the memory used 
 	free(pi->DEPointer);
 	free(pi);
@@ -309,8 +309,10 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		}
 		//update the free space map
 		updateBitMap(vcb.freeSpaceBitMap);
-		fcbArray[fd].fileBlocks += ADDITIONAL_FILE_BLOCK;	//update the file size
-		int result = addToExtentTable(fcbArray[fd].extentTable, newFileLocation, ADDITIONAL_FILE_BLOCK);	//update extent table
+		//update the file size
+		fcbArray[fd].fileBlocks += ADDITIONAL_FILE_BLOCK;	
+		//update extent table
+		int result = addToExtentTable(fcbArray[fd].extentTable, newFileLocation, ADDITIONAL_FILE_BLOCK);	
 		//check if extent table is full
 		if(result == -1){
 			printf("Out of Extent\n");
@@ -434,7 +436,7 @@ int b_read (b_io_fd fd, char * buffer, int count)
 	int fileBlockIndex = fcbArray[fd].fileOffset / B_CHUNK_SIZE;
 	//Rechecking the buffer index
 	fcbArray[fd].index = fcbArray[fd].fileOffset % B_CHUNK_SIZE;
-	//printf("D: %d, %d, %d, %d\n",fcbArray[fd].fileOffset, fcbArray[fd].fileSize, fcbArray[fd].extentLocation, fcbArray[fd].extentTable[0].location);
+	
 	//Setting neededBytes to remainingFileSize instead if neededBytes is larger
 	if(neededBytes > remainingFileSize){
 		neededBytes = remainingFileSize;
@@ -500,26 +502,27 @@ int b_read (b_io_fd fd, char * buffer, int count)
 		neededBytes -= copyAmount;
 	}
 	
-	//printf("\n-----printed %d, %d, %d-----\n",fcbArray[fd].fileOffset, callerBufferOffset, count);
+	
 	return callerBufferOffset;
 	}
 	
 // Interface to Close the file	
 int b_close (b_io_fd fd)
 	{	
+		//Check if we allocated more blocks for the file then we needed
 		if(fcbArray[fd].fileBlocks > (fcbArray[fd].fileSize + B_CHUNK_SIZE -1)/B_CHUNK_SIZE){
 			int location = fcbArray[fd].fileSize/B_CHUNK_SIZE;
 			location++;
-			//printf("Location: %d\n", location);
-			//printExtentTable(fcbArray[fd].extentTable);
+			//Release the free blocks that is not needed
 			releaseFreeBlocksExtent(fcbArray[fd].extentTable, location);
-			//printExtentTable(fcbArray[fd].extentTable);
 			updateExtentTable(fcbArray[fd].extentTable, fcbArray[fd].extentLocation);
 			updateBitMap(vcb.freeSpaceBitMap);
+			//printExtentTable(fcbArray[fd].extentTable);
 			
 		}
 		//reload cwd
 		LBAread(cwdEntries, DIRECTORY_BLOCKSIZE, cwdEntries[0].location);
+		//Free all the buffer
 		free(fcbArray[fd].buf);
 		fcbArray[fd].buf = NULL;
 		free(fcbArray[fd].extentTable);
