@@ -20,10 +20,11 @@
 #include "vcb.h"
 
 //Helper Function
+//returns the size of the extent table
 int getExtentTableSize(extent* extentTable){
     int size = 0;
     for(int i = 0; i < NUMBER_OF_EXTENT; i++){
-        if(extentTable[i].location != -1){
+        if(extentTable[i].location != -1){  //-1 means free state
             size++;
         }else{
             //break loop
@@ -33,6 +34,7 @@ int getExtentTableSize(extent* extentTable){
     return size;
 }   
 
+//helper function to add the element in the extent Table
 void mergeNewRow(extent* extentTable){
     int maxRow = getExtentTableSize(extentTable);
     for(int i = 0; i < maxRow - 1; i++){
@@ -44,17 +46,23 @@ void mergeNewRow(extent* extentTable){
     }
 
 }
-
+//helper routine to get pointer to extent table
+//takes the location of extent in free space bitMap
+//returns a pointer to extent table
 extent* getExtentTable(int extentLocation){
     extent* extentTable = malloc(NUMBER_OF_EXTENT*sizeof(extent));
     LBAread(extentTable, EXTENT_BLOCK_SIZE, extentLocation);
     return extentTable;
 }
 
+//helper routine to initialize extent table
+//it takes the location of extent location in bitMap
+
 void initExtentTable(int extentLocation){
     extent* extentTable = malloc(NUMBER_OF_EXTENT*sizeof(extent));
     LBAread(extentTable, EXTENT_BLOCK_SIZE, extentLocation);
-
+    //initializing all in free state
+    // free state --> -1
     for(int i = 0; i < NUMBER_OF_EXTENT; i++){
         extentTable[i].location = -1;
         extentTable[i].count = -1;
@@ -63,10 +71,11 @@ void initExtentTable(int extentLocation){
     free(extentTable);
 }
 
+//helper routine to add values in extent table
 int addToExtentTable(extent* extentTable, int location, int count){
     int flag = 0;
     for(int i = 0; i < NUMBER_OF_EXTENT; i++){
-        if(extentTable[i].location == -1){
+        if(extentTable[i].location == -1){  //found the free extent
             extentTable[i].location = location;
             extentTable[i].count = count;
             //exit loop
@@ -74,6 +83,8 @@ int addToExtentTable(extent* extentTable, int location, int count){
             flag = 1;
         }
     }
+
+    //checking if there is enough space in extent table
     if(flag == 0){
         printf("out of row in the extent table\n");
         return -1;
@@ -107,6 +118,7 @@ int getLBAFromFile(extent* extentTable, int location){
     return result;
 }
 
+//helper routine to set the extent table of the file to free state
 void releaseFile(int extentLocation){
     extent* extentTable = getExtentTable(extentLocation);
     for(int i = 0; i < NUMBER_OF_EXTENT; i++){
@@ -150,11 +162,13 @@ void releaseFreeBlocksExtent(extent* extentTable, int location){
     }
 }
 
+//update extent table -- helper routine
 void updateExtentTable(extent* extentTable, int extentLocation){
     //printf("Overwrite %d\n", extentLocation);
     LBAwrite(extentTable, 1, extentLocation);
 }
 
+//printing the content of extent table
 void printExtentTable(extent* extentTable){
     int maxRow = getExtentTableSize(extentTable);
     for(int i = 0; i < maxRow; i++){

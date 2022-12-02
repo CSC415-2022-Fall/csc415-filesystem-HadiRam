@@ -113,7 +113,7 @@ b_io_fd b_open (char * filename, int flags)
 		return -1;
 	}
 	
-	//if flags is O_CREAT and path is correct but file doesn't exists
+	//if flags is O_CREAT and path is correct but file doesn't exist
 	if(flags & O_CREAT == O_CREAT && pi->value == -1){
 
 		//Find free directory Entry inside parent directory
